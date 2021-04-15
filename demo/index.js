@@ -8,7 +8,7 @@ import '@anypoint-web-components/anypoint-item/anypoint-item.js';
 import '@anypoint-web-components/anypoint-checkbox/anypoint-checkbox.js';
 import { AmfStoreService } from '@api-client/amf-store';
 import '../graph-api-navigation.js';
-import { NavigationEventTypes } from '../index.js';
+import { NavigationEventTypes, NavigationEditCommands, NavigationContextMenu } from '../index.js';
 
 /** @typedef {import('../index').APIGraphNavigationEvent} APIGraphNavigationEvent */
 
@@ -21,6 +21,7 @@ class ComponentPage extends DemoPage {
       'latestSelected', 'latestType', 'latestEndpoint',
       'summary', 'sort', 'filter',
       'selectedId', 'selectedType', 'selectedOptions',
+      'edit', 'apiId'
     ]);
     this.loaded = false;
     this.initialized = false;
@@ -28,15 +29,27 @@ class ComponentPage extends DemoPage {
     this.summary = true;
     this.sort = true;
     this.filter = true;
+    this.edit = true;
     this.selectedId = undefined;
     this.selectedType = undefined;
     this.selectedOptions = undefined;
+    this.apiId = undefined;
     this.store = new AmfStoreService(window, {
       amfLocation: '/node_modules/@api-client/amf-store/amf-bundle.js',
     });
     this.componentName = 'graph-api-navigation';
     this.actionHandler = this.actionHandler.bind(this);
     window.addEventListener(NavigationEventTypes.navigate, this.navigationHandler.bind(this));
+  }
+
+  async firstRender() {
+    await super.firstRender();
+    const element = document.body.querySelector('graph-api-navigation');
+    if (element) {
+      this.contextMenu = new NavigationContextMenu(element);
+      this.contextMenu.registerCommands(NavigationEditCommands);
+      this.contextMenu.connect();
+    }
   }
 
   /**
@@ -61,6 +74,8 @@ class ComponentPage extends DemoPage {
     const rsp = await fetch(`./${file}`);
     const model = await rsp.text();
     await this.store.loadGraph(model);
+    const api = await this.store.getApi();
+    this.apiId = api.id;
     this.loaded = true;
   }
 
@@ -91,13 +106,14 @@ class ComponentPage extends DemoPage {
         This demo lets you preview the Graph API navigation document with various configuration options.
       </p>
 
-      ${loaded ? this._navTemplate() : html`<p>Load an API model first.</p>`}
+      ${this._navTemplate()}
+      ${!loaded ? html`<p>Load an API model first.</p>` : ''}
     </section>
     `;
   }
 
   _navTemplate() {
-    const { demoStates, darkThemeActive, summary, sort, filter, selectedId, selectedOptions, selectedType } = this;
+    const { demoStates, darkThemeActive, summary, sort, filter, edit, selectedId, selectedOptions, selectedType, apiId } = this;
     return html`
     <arc-interactive-demo
       .states="${demoStates}"
@@ -106,9 +122,12 @@ class ComponentPage extends DemoPage {
     >
       <graph-api-navigation
         endpointsOpened
+        .apiId="${apiId}"
         ?summary="${summary}"
         ?sort="${sort}"
         ?filter="${filter}"
+        ?edit="${edit}"
+        manualQuery
         slot="content"
       >
       </graph-api-navigation>
@@ -140,6 +159,15 @@ class ComponentPage extends DemoPage {
         @change="${this._toggleMainOption}"
       >
         Filter input
+      </anypoint-checkbox>
+      <anypoint-checkbox
+        aria-describedby="mainOptionsLabel"
+        slot="options"
+        name="edit"
+        .checked="${filter}"
+        @change="${this._toggleMainOption}"
+      >
+        Edit graph
       </anypoint-checkbox>
 
     </arc-interactive-demo>

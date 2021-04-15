@@ -2,19 +2,24 @@
 /* eslint-disable prefer-destructuring */
 /* eslint-disable class-methods-use-this */
 import { LitElement, html } from 'lit-element';
+import { EventsTargetMixin } from '@advanced-rest-client/events-target-mixin';
 import { styleMap } from 'lit-html/directives/style-map.js';
 import { classMap } from 'lit-html/directives/class-map.js';
-import { StoreEvents, ApiSorting, EndpointsTree } from '@api-client/amf-store';
+import { StoreEvents, StoreEventTypes, ApiSorting, EndpointsTree } from '@api-client/amf-store';
 import { Styles as HttpStyles } from '@api-components/http-method-label';
 import '@anypoint-web-components/anypoint-button/anypoint-icon-button.js';
 import '@advanced-rest-client/arc-icons/arc-icon.js';
 import '@anypoint-web-components/anypoint-collapse/anypoint-collapse.js';
 import navStyles from './styles/NavStyles.js';
 import { NavigationEvents } from './events/navigation/NavigationEvents.js';
+// import { NavigationEventTypes } from './events/navigation/EventTypes.js';
 import { TelemetryEvents } from './events/telemetry/TelemetryEvents.js';
 import { ReportingEvents } from './events/reporting/ReportingEvents.js';
 
 /** @typedef {import('@api-client/amf-store').ApiEndPointWithOperationsListItem} ApiEndPointWithOperationsListItem */
+/** @typedef {import('@api-client/amf-store').ApiStoreStateCreateEvent} ApiStoreStateCreateEvent */
+/** @typedef {import('@api-client/amf-store').ApiStoreStateDeleteEvent} ApiStoreStateDeleteEvent */
+/** @typedef {import('@api-client/amf-store').ApiStoreStateUpdateEvent} ApiStoreStateUpdateEvent */
 /** @typedef {import('lit-html').TemplateResult} TemplateResult */
 /** @typedef {import('@anypoint-web-components/anypoint-collapse').AnypointCollapseElement} AnypointCollapseElement */
 /** @typedef {import('./types').EndpointItem} EndpointItem */
@@ -93,8 +98,16 @@ export const processQuery = Symbol('processQuery');
 export const searchHandler = Symbol('searchHandler');
 export const resetTabindices = Symbol('resetTabindices');
 export const notifyNavigation = Symbol('notifyNavigation');
+export const addingEndpointValue = Symbol('addingEndpointValue');
+export const addEndpointInputTemplate = Symbol('addEndpointInputTemplate');
+export const addEndpointKeydownHandler = Symbol('addEndpointKeydownHandler');
+export const commitNewEndpoint = Symbol('commitNewEndpoint');
+export const cancelNewEndpoint = Symbol('cancelNewEndpoint');
+export const endpointCreatedHandler = Symbol('endpointCreatedHandler');
+export const endpointDeletedHandler = Symbol('endpointDeletedHandler');
+export const endpointUpdatedHandler = Symbol('endpointUpdatedHandler');
 
-export default class GraphApiNavigationElement extends LitElement {
+export default class GraphApiNavigationElement extends EventsTargetMixin(LitElement) {
   static get styles() {
     return [navStyles, HttpStyles.default];
   }
@@ -291,6 +304,16 @@ export default class GraphApiNavigationElement extends LitElement {
        * When set it renders an input to filter the menu items.
        */
       filter: { type: Boolean, reflect: true, },
+      /** 
+       * When set the element won't query the store when attached to the DOM.
+       * Instead set the `apiId` property or directly call the `queryGraph()` function.
+       */
+      manualQuery: { type: Boolean, reflect: true, },
+      /** 
+       * When set it enables graph items editing functionality.
+       * The user can double-click on a menu item and edit its name.
+       */
+      edit: { type: Boolean, reflect: true, },
     };
   }
 
@@ -307,6 +330,8 @@ export default class GraphApiNavigationElement extends LitElement {
     this.schemesOpened = false;
     this.securityOpened = false;
     this.filter = false;
+    this.edit = false;
+    this.manualQuery = false;
 
     /** 
      * @type {EndpointItem[]}
@@ -348,6 +373,9 @@ export default class GraphApiNavigationElement extends LitElement {
 
     this[focusHandler] = this[focusHandler].bind(this);
     this[keydownHandler] = this[keydownHandler].bind(this);
+    this[endpointCreatedHandler] = this[endpointCreatedHandler].bind(this);
+    this[endpointDeletedHandler] = this[endpointDeletedHandler].bind(this);
+    this[endpointUpdatedHandler] = this[endpointUpdatedHandler].bind(this);
   }
 
   /**
@@ -364,7 +392,9 @@ export default class GraphApiNavigationElement extends LitElement {
     }
     this.addEventListener('focus', this[focusHandler]);
     this.addEventListener('keydown', this[keydownHandler]);
-    this.queryGraph();
+    if (!this.manualQuery && !this.apiId) {
+      this.queryGraph();
+    }
   }
 
   disconnectedCallback() {
@@ -372,6 +402,26 @@ export default class GraphApiNavigationElement extends LitElement {
     this.removeEventListener('focus', this[focusHandler]);
     this.removeEventListener('keydown', this[keydownHandler]);
     this[itemsValue] = undefined;
+  }
+
+  /**
+   * @param {EventTarget} node
+   */
+  _attachListeners(node) {
+    super._attachListeners(node);
+    node.addEventListener(StoreEventTypes.Endpoint.State.created, this[endpointCreatedHandler]);
+    node.addEventListener(StoreEventTypes.Endpoint.State.deleted, this[endpointDeletedHandler]);
+    node.addEventListener(StoreEventTypes.Endpoint.State.updated, this[endpointUpdatedHandler]);
+  }
+
+  /**
+   * @param {EventTarget} node
+   */
+  _detachListeners(node) {
+    super._detachListeners(node);
+    node.removeEventListener(StoreEventTypes.Endpoint.State.created, this[endpointCreatedHandler]);
+    node.removeEventListener(StoreEventTypes.Endpoint.State.deleted, this[endpointDeletedHandler]);
+    node.removeEventListener(StoreEventTypes.Endpoint.State.updated, this[endpointUpdatedHandler]);
   }
 
   /**
@@ -1198,9 +1248,31 @@ export default class GraphApiNavigationElement extends LitElement {
   }
 
   /**
+   * Opens all sections of the menu and all endpoints.
+   */
+  expandAll() {
+    this.endpointsOpened = true;
+    this.schemesOpened = true;
+    this.securityOpened = true;
+    this.documentationsOpened = true;
+    this.expandAllEndpoints();
+  }
+
+  /**
+   * Closes all sections of the menu and all endpoints.
+   */
+  collapseAll() {
+    this.endpointsOpened = false;
+    this.schemesOpened = false;
+    this.securityOpened = false;
+    this.documentationsOpened = false;
+    this.collapseAllEndpoints();
+  }
+
+  /**
    * Opens all endpoints exposing all operations
    */
-  openAllEndpoints() {
+  expandAllEndpoints() {
     this.endpointsOpened = true;
     const items = /** @type HTMLInputElement[] */ (Array.from(this.shadowRoot.querySelectorAll('section.endpoints .list-item.endpoint')));
     this[openedEndpointsValue] = [];
@@ -1219,6 +1291,24 @@ export default class GraphApiNavigationElement extends LitElement {
   collapseAllEndpoints() {
     this[openedEndpointsValue] = [];
     this.requestUpdate();
+  }
+
+  /**
+   * Triggers a flow when the user can define a new endpoint in the navigation.
+   * This renders an input in the view (in the endpoints list) where the user can enter the path name.
+   */
+  async addEndpoint() {
+    if (!this.endpointsOpened) {
+      this.endpointsOpened = true;
+      await this.updateComplete;
+    }
+    this[addingEndpointValue] = true;
+    await this.requestUpdate();
+    const wrap = this.shadowRoot.querySelector('.add-endpoint-input');
+    wrap.scrollIntoView();
+    const input = wrap.querySelector('input');
+    input.focus();
+    input.select();
   }
 
   /**
@@ -1255,6 +1345,81 @@ export default class GraphApiNavigationElement extends LitElement {
       action: 'Navigate',
       label: type,
     });
+  }
+
+  /**
+   * Event handler for the keydown event of the add endpoint input.
+   * @param {KeyboardEvent} e
+   */
+  [addEndpointKeydownHandler](e) {
+    if (e.key === 'Enter' || e.key === 'NumpadEnter') {
+      e.preventDefault();
+      this[commitNewEndpoint]();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      this[cancelNewEndpoint]();
+    }
+  }
+
+  async [commitNewEndpoint]() {
+    const input = /** @type HTMLInputElement */ (this.shadowRoot.querySelector('.add-endpoint-input input'))
+    if (!input) {
+      return;
+    }
+    const name = input.value.trim();
+    if (!name) {
+      return;
+    }
+    await StoreEvents.Endpoint.add(this, { path: name });
+    await this[cancelNewEndpoint]();
+  }
+
+  async [cancelNewEndpoint]() {
+    this[addingEndpointValue] = false;
+    await this.requestUpdate();
+  }
+
+  /**
+   * @param {ApiStoreStateCreateEvent} e
+   */
+  async [endpointCreatedHandler](e) {
+    if (e.defaultPrevented) {
+      return;
+    }
+    const ctrl = new AbortController();
+    this[abortControllerValue] = ctrl;
+    await this[queryEndpoints](ctrl.signal);
+    this[abortControllerValue] = undefined;
+    this.requestUpdate();
+  }
+
+  /**
+   * @param {ApiStoreStateDeleteEvent} e
+   */
+  async [endpointDeletedHandler](e) {
+    if (e.defaultPrevented) {
+      return;
+    }
+    const ctrl = new AbortController();
+    this[abortControllerValue] = ctrl;
+    await this[queryEndpoints](ctrl.signal);
+    this[abortControllerValue] = undefined;
+    this.requestUpdate();
+  }
+
+  /**
+   * @param {ApiStoreStateUpdateEvent} e
+   */
+  async [endpointUpdatedHandler](e) {
+    const { property } = e.detail;
+    if (!['name', 'displayName', 'path'].includes(property)) {
+      return;
+    }
+    const ctrl = new AbortController();
+    this[abortControllerValue] = ctrl;
+    await this[queryEndpoints](ctrl.signal);
+    this[abortControllerValue] = undefined;
+    this.requestUpdate();
   }
 
   render() {
@@ -1320,6 +1485,7 @@ export default class GraphApiNavigationElement extends LitElement {
       endpoints: true,
       opened: endpointsOpened,
     };
+    const addingEndpoint = this[addingEndpointValue];
     return html`
     <section
       class="${classMap(classes)}"
@@ -1352,6 +1518,7 @@ export default class GraphApiNavigationElement extends LitElement {
       >
         <div class="children">
           ${items.map(item => this[endpointTemplate](item))}
+          ${addingEndpoint ? this[addEndpointInputTemplate]() : ''}
         </div>
       </anypoint-collapse>
     </section>
@@ -1730,6 +1897,22 @@ export default class GraphApiNavigationElement extends LitElement {
         @change="${this[searchHandler]}"
       />
       <arc-icon icon="search"></arc-icon>
+    </div>
+    `;
+  }
+
+  /**
+   * @return {TemplateResult} The template for the new endpoint input.
+   */
+  [addEndpointInputTemplate]() {
+    return html`
+    <div
+      part="api-navigation-input-item"
+      class="input-item add-endpoint-input"
+      data-graph-shape="endpoint"
+    >
+      <input type="text" class="add-endpoint-input" @keydown="${this[addEndpointKeydownHandler]}"/>
+      <arc-icon icon="add" title="Enter to save, ESC to cancel"></arc-icon>
     </div>
     `;
   }

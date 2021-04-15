@@ -25,3 +25,6 @@ export {
 
 export { ReportingEventTypes } from './src/events/reporting/ReportingEventTypes';
 export { ReportingEvents, GraphErrorEvent } from './src/events/reporting/ReportingEvents';
+
+export { default as NavigationEditCommands } from './src/plugins/NavigationEditCommands';
+export { NavigationContextMenu } from './src/plugins/NavigationContextMenu';

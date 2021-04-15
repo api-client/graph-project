@@ -201,4 +201,23 @@ section.opened .toggle-button.section {
   background-color: transparent;
   outline: none;
 }
+
+.input-item {
+  padding: 0 12px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 40px;
+  background-color: var(--api-navigation-edit-input-background-color, #e6e6e6);
+  border-radius: var(--api-navigation-edit-input-border-radius, 16px);
+}
+
+.input-item input {
+  margin: 0;
+  padding: 0;
+  border: none;
+  width: 100%;
+  outline: none;
+  background: transparent;
+}
 `;

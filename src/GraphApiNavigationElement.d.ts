@@ -1,4 +1,5 @@
 import { LitElement, TemplateResult, CSSResult } from 'lit-element';
+import { EventsTargetMixin } from '@advanced-rest-client/events-target-mixin';
 import { ApiEndPointWithOperationsListItem } from '@api-client/amf-store';
 import { EndpointItem, OperationItem, DocumentationItem, NodeShapeItem, SecurityItem, SelectableMenuItem } from './types';
 
@@ -74,11 +75,16 @@ export declare const processQuery: unique symbol;
 export declare const searchHandler: unique symbol;
 export declare const resetTabindices: unique symbol;
 export declare const notifyNavigation: unique symbol;
+export declare const addingEndpointValue: unique symbol;
+export declare const addEndpointInputTemplate: unique symbol;
+export declare const addEndpointKeydownHandler: unique symbol;
+export declare const commitNewEndpoint: unique symbol;
+export declare const cancelNewEndpoint: unique symbol;
 
 /**
  * @fires graphload
  */
-export default class GraphApiNavigationElement extends LitElement {
+export default class GraphApiNavigationElement extends EventsTargetMixin(LitElement) {
   static get styles(): CSSResult;
 
   [apiIdValue]: string;
@@ -105,6 +111,7 @@ export default class GraphApiNavigationElement extends LitElement {
   * Cached list of all list elements
   */
   [itemsValue]: HTMLElement[];
+  [addingEndpointValue]?: boolean;
 
   /** 
    * When true then the element is currently querying for the graph data.
@@ -235,6 +242,18 @@ export default class GraphApiNavigationElement extends LitElement {
   * @attribute
   */
   filter: boolean;
+  /** 
+   * When set the element won't query the store when attached to the DOM.
+   * Instead set the `apiId` property or directly call the `queryGraph()` function.
+   * @attribute
+   */
+  manualQuery: boolean;
+  /** 
+  * When set it enables graph items editing functionality.
+  * The user can double-click on a menu item and edit its name.
+  * @attribute
+  */
+  edit: boolean;
 
   constructor();
 
@@ -476,14 +495,30 @@ export default class GraphApiNavigationElement extends LitElement {
   [searchHandler](e: Event): void;
 
   /**
+   * Opens all sections of the menu and all endpoints.
+   */
+  expandAll(): void;
+
+  /**
+   * Closes all sections of the menu and all endpoints.
+   */
+  collapseAll(): void;
+
+  /**
    * Opens all endpoints exposing all operations
    */
-  openAllEndpoints(): void;
+  expandAllEndpoints(): void;
 
   /**
    * Hides all operations and collapses all endpoints.
    */
   collapseAllEndpoints(): void;
+
+  /**
+   * Triggers a flow when the user can define a new endpoint in the navigation.
+   * This renders an input in the view (in the endpoints list) where the user can enter the path name.
+   */
+  addEndpoint(): Promise<void>;
 
   /**
    * Resets all tabindex attributes to the appropriate value based on the
@@ -500,6 +535,11 @@ export default class GraphApiNavigationElement extends LitElement {
    * @param type The domain type.
    */
   [notifyNavigation](id: string, type: string): void;
+
+  /**
+   * Event handler for the keydown event of the add endpoint input.
+   */
+  [addEndpointKeydownHandler](e: KeyboardEvent): void;
 
   render(): TemplateResult;
 
@@ -570,4 +610,8 @@ export default class GraphApiNavigationElement extends LitElement {
    * @returns The template for the filter input.
    */
   [filterTemplate](): TemplateResult|string;
+  /**
+   * @return The template for the new endpoint input.
+   */
+  [addEndpointInputTemplate](): TemplateResult;
 }
