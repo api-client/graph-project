@@ -16,11 +16,12 @@ declare interface NavigationEvents {
    * This is a general purpose action. It has the `detail` object with optional
    * `purpose` property which can be used to support different kind of external navigation.
    * 
-   * @param {EventTarget} target A node on which to dispatch the event.
-   * @param {string} url The URL to open
-   * @param {ExternalNavigationOptions=} opts  Additional request parameters
+   * @param target A node on which to dispatch the event.
+   * @param url The URL to open
+   * @param opts  Additional request parameters
+   * @returns True when the event was cancelled meaning the navigation handled.
    */
-  navigateExternal(target: EventTarget, url: string, opts?: ExternalNavigationOptions): void;
+  navigateExternal(target: EventTarget, url: string, opts?: ExternalNavigationOptions): boolean;
 
   /**
    * Dispatches the navigate help event

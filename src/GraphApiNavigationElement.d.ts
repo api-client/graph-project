@@ -1,10 +1,7 @@
 import { LitElement, TemplateResult, CSSResult } from 'lit-element';
 import { EventsTargetMixin } from '@advanced-rest-client/events-target-mixin';
-import { ApiEndPointWithOperationsListItem } from '@api-client/amf-store';
-import { EndpointItem, OperationItem, DocumentationItem, NodeShapeItem, SecurityItem, SelectableMenuItem } from './types';
-
-
-/** @typedef {import('@anypoint-web-components/anypoint-collapse').AnypointCollapseElement} AnypointCollapseElement */
+import { ApiEndPoint, ApiEndPointWithOperationsListItem, ApiOperation, ApiStoreStateCreateEvent, ApiStoreStateDeleteEvent, ApiStoreStateUpdateEvent, ApiDocumentation, ApiNodeShape } from '@api-client/amf-store';
+import { EndpointItem, OperationItem, DocumentationItem, NodeShapeItem, SecurityItem, SelectableMenuItem, EditableMenuItem, EditableMenuType, SchemaAddType } from './types';
 
 export declare const apiIdValue: unique symbol;
 export declare const isAsyncValue: unique symbol;
@@ -20,7 +17,7 @@ export declare const openedEndpointsValue: unique symbol;
 export declare const queryApi: unique symbol;
 export declare const queryEndpoints: unique symbol;
 export declare const queryDocumentations: unique symbol;
-export declare const querySchemes: unique symbol;
+export declare const querySchemas: unique symbol;
 export declare const querySecurity: unique symbol;
 export declare const createFlatTreeItems: unique symbol;
 export declare const getFilteredEndpoints: unique symbol;
@@ -80,6 +77,34 @@ export declare const addEndpointInputTemplate: unique symbol;
 export declare const addEndpointKeydownHandler: unique symbol;
 export declare const commitNewEndpoint: unique symbol;
 export declare const cancelNewEndpoint: unique symbol;
+export declare const endpointCreatedHandler: unique symbol;
+export declare const endpointDeletedHandler: unique symbol;
+export declare const endpointUpdatedHandler: unique symbol;
+export declare const operationCreatedHandler: unique symbol;
+export declare const operationUpdatedHandler: unique symbol;
+export declare const operationDeletedHandler: unique symbol;
+export declare const documentationCreatedHandler: unique symbol;
+export declare const documentationUpdatedHandler: unique symbol;
+export declare const documentationDeletedHandler: unique symbol;
+export declare const schemaCreatedHandler: unique symbol;
+export declare const schemaUpdatedHandler: unique symbol;
+export declare const schemaDeletedHandler: unique symbol;
+export declare const findViewModelItem: unique symbol;
+export declare const renameInputTemplate: unique symbol;
+export declare const renameKeydownHandler: unique symbol;
+export declare const renameBlurHandler: unique symbol;
+export declare const updateNameHandler: unique symbol;
+export declare const addDocumentationInputTemplate: unique symbol;
+export declare const addDocumentationKeydownHandler: unique symbol;
+export declare const addingDocumentationValue: unique symbol;
+export declare const addingExternalValue: unique symbol;
+export declare const commitNewDocumentation: unique symbol;
+export declare const externalDocumentationHandler: unique symbol;
+export declare const addingSchemaValue: unique symbol;
+export declare const addSchemaInputTemplate: unique symbol;
+export declare const addSchemaKeydownHandler: unique symbol;
+export declare const commitNewSchema: unique symbol;
+export declare const addingSchemaTypeValue: unique symbol;
 
 /**
  * @fires graphload
@@ -100,7 +125,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   [queryValue]: string;
   /** 
   * Information read from the AMF store indicating that the currently loaded API
-  * is an Async API.
+  * is an API.
   */
   [isAsyncValue]: boolean;
   /** 
@@ -112,6 +137,10 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   */
   [itemsValue]: HTMLElement[];
   [addingEndpointValue]?: boolean;
+  [addingDocumentationValue]?: boolean;
+  [addingExternalValue]?: boolean;
+  [addingSchemaValue]?: boolean;
+  [addingSchemaTypeValue]?: string;
 
   /** 
    * When true then the element is currently querying for the graph data.
@@ -131,9 +160,9 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   get hasDocs(): boolean;
 
   /**
-   * @returns true when has schemes definitions
+   * @returns true when has schemas definitions
    */
-  get hasSchemes(): boolean;
+  get hasSchemas(): boolean;
 
   /**
    * @returns true when `_security` property is set with values
@@ -196,10 +225,10 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   */
   documentationsOpened: boolean;
   /**
-  * Determines and changes state of schemes (types) panel.
+  * Determines and changes state of schemas (types) panel.
   * @attribute
   */
-  schemesOpened: boolean;
+  schemasOpened: boolean;
   /**
   * Determines and changes state of security panel.
   * @attribute
@@ -286,9 +315,9 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   [queryDocumentations](signal: AbortSignal): Promise<void>;
 
   /**
-   * Queries and sets types (schemes) data
+   * Queries and sets types (schemas) data
    */
-  [querySchemes](signal: AbortSignal): Promise<void>;
+  [querySchemas](signal: AbortSignal): Promise<void>;
 
   /**
    * Queries and sets security data
@@ -521,6 +550,18 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   addEndpoint(): Promise<void>;
 
   /**
+   * Triggers a flow when the user can define a new documentation document.
+   * This renders an input in the view (in the documentation list) where the user can enter the name.
+   * @param isExternal Whether the documentation is a link to a www document.
+   */
+  addDocumentation(isExternal?: boolean): Promise<void>;
+  /**
+   * Triggers a flow when the user can define a new schema in the navigation.
+   * This renders an input in the view (in the schema list) where the user can enter the schema name.
+   * @param type The type of the schema to add. Default to `object`.
+   */
+  addSchema(type?: SchemaAddType): Promise<void>;
+  /**
    * Resets all tabindex attributes to the appropriate value based on the
    * current selection state. The appropriate value is `0` (focusable) for
    * the default selected item, and `-1` (not keyboard focusable) for all
@@ -540,6 +581,74 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    * Event handler for the keydown event of the add endpoint input.
    */
   [addEndpointKeydownHandler](e: KeyboardEvent): void;
+
+  /**
+   * Event handler for the keydown event of the add documentation input.
+   */
+  [addDocumentationKeydownHandler](e: KeyboardEvent): void;
+  /**
+   * Event handler for the keydown event of the add schema input.
+   */
+  [addSchemaKeydownHandler](e: KeyboardEvent): void;
+  [commitNewEndpoint](): Promise<void>;
+  [cancelNewEndpoint](): Promise<void>;
+  /**
+   * @param value The title of the documentation.
+   */
+  [commitNewDocumentation](value: string): Promise<void>;
+  /**
+   * @param value The name of the schema.
+   */
+  [commitNewSchema](value: string);
+  [endpointCreatedHandler](e: ApiStoreStateCreateEvent<ApiEndPoint>): Promise<void>;
+  [endpointDeletedHandler](e: ApiStoreStateDeleteEvent): Promise<void>;
+  [endpointUpdatedHandler](e: ApiStoreStateUpdateEvent<ApiEndPoint>): Promise<void>;
+  [operationCreatedHandler](e: ApiStoreStateCreateEvent<ApiOperation>): Promise<void>;
+  [operationUpdatedHandler](e: ApiStoreStateUpdateEvent<ApiOperation>): Promise<void>;
+  [operationDeletedHandler](e: ApiStoreStateDeleteEvent): Promise<void>;
+  [documentationCreatedHandler](e: ApiStoreStateCreateEvent<ApiDocumentation>): Promise<void>;
+  [documentationUpdatedHandler](e: ApiStoreStateUpdateEvent<ApiDocumentation>): Promise<void>;
+  [documentationDeletedHandler](e: ApiStoreStateDeleteEvent): Promise<void>;
+  [schemaCreatedHandler](e: ApiStoreStateCreateEvent<ApiNodeShape>): Promise<void>;
+  [schemaUpdatedHandler](e: ApiStoreStateUpdateEvent<ApiNodeShape>): Promise<void>;
+  [schemaDeletedHandler](e: ApiStoreStateDeleteEvent): Promise<void>;
+
+  /**
+   * Triggers a rename action for the menu item identified by the `id`.
+   * @param id The domain id of the item to edit.
+   */
+  renameAction(id: string): Promise<void>;
+
+  /**
+   * @param {string} id The domain id of the item to find.
+   */
+  [findViewModelItem](id: string): SelectableMenuItem & EditableMenuItem | null;
+
+  /**
+   * A key down event handler on the rename input
+   */
+  [renameKeydownHandler](e: KeyboardEvent): Promise<void>;
+
+  /**
+   * A blur event handler on the rename input
+   */
+  [renameBlurHandler](e: Event): Promise<void>;
+
+  /**
+   * Updates the name or the display name of the menu object
+   * @param id The id of the domain object to update
+   * @param value The new value.
+   * @param type The object type
+   * @returns A promise when the update operation finish.
+   */
+  [updateNameHandler](id: string, value: string, type: EditableMenuType): Promise<void>;
+
+  /**
+   * Click handler for the external navigation item.
+   * Dispatches the external navigation event. When this event is handled (cancelled)
+   * the original event is cancelled to prevent default behavior.
+   */
+  [externalDocumentationHandler](e: Event): void;
 
   render(): TemplateResult;
 
@@ -614,4 +723,19 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    * @return The template for the new endpoint input.
    */
   [addEndpointInputTemplate](): TemplateResult;
+  /**
+   * @return The template for the new documentation input.
+   */
+  [addDocumentationInputTemplate](): TemplateResult;
+  /**
+   * @return The template for the new schema input.
+   */
+  [addSchemaInputTemplate](): TemplateResult;
+  /**
+   * @param id The domain id of the item being edited
+   * @param label The current name to render.
+   * @param type
+   * @returns The template for the rename input. 
+   */
+  [renameInputTemplate](id: string, label: string, type: EditableMenuType): TemplateResult;
 }

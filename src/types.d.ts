@@ -12,8 +12,20 @@ interface SelectableMenuItem {
   secondarySelected?: boolean;
 }
 
-export declare interface EndpointItem extends ApiEndpointsTreeItem, SelectableMenuItem {}
-export declare interface OperationItem extends ApiOperationListItem, SelectableMenuItem {}
-export declare interface DocumentationItem extends ApiDocumentation, SelectableMenuItem {}
-export declare interface NodeShapeItem extends ApiNodeShapeListItem, SelectableMenuItem {}
+interface EditableMenuItem {
+  /**
+   * When set the name editor for the item is enabled.
+   */
+  nameEditor?: boolean;
+}
+
+export declare interface EndpointItem extends ApiEndpointsTreeItem, SelectableMenuItem, EditableMenuItem {
+  operations: OperationItem[];
+}
+export declare interface OperationItem extends ApiOperationListItem, SelectableMenuItem, EditableMenuItem {}
+export declare interface DocumentationItem extends ApiDocumentation, SelectableMenuItem, EditableMenuItem {}
+export declare interface NodeShapeItem extends ApiNodeShapeListItem, SelectableMenuItem, EditableMenuItem {}
 export declare interface SecurityItem extends ApiSecuritySchemeListItem, SelectableMenuItem {}
+
+export declare type EditableMenuType = 'endpoint'|'operation'|'documentation'|'schema';
+export declare type SchemaAddType = 'scalar'|'object'|'file'|'array'|'union';

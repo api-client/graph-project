@@ -7,10 +7,12 @@ import '@anypoint-web-components/anypoint-listbox/anypoint-listbox.js';
 import '@anypoint-web-components/anypoint-item/anypoint-item.js';
 import '@anypoint-web-components/anypoint-checkbox/anypoint-checkbox.js';
 import { AmfStoreService } from '@api-client/amf-store';
+import { NavigationEventTypes, NavigationEditCommands, NavigationContextMenu, ReportingEventTypes } from '../index.js';
 import '../graph-api-navigation.js';
-import { NavigationEventTypes, NavigationEditCommands, NavigationContextMenu } from '../index.js';
 
 /** @typedef {import('../index').APIGraphNavigationEvent} APIGraphNavigationEvent */
+/** @typedef {import('../index').APIExternalNavigationEvent} APIExternalNavigationEvent */
+/** @typedef {import('../index').GraphErrorEvent} GraphErrorEvent */
 
 class ComponentPage extends DemoPage {
   constructor() {
@@ -40,6 +42,9 @@ class ComponentPage extends DemoPage {
     this.componentName = 'graph-api-navigation';
     this.actionHandler = this.actionHandler.bind(this);
     window.addEventListener(NavigationEventTypes.navigate, this.navigationHandler.bind(this));
+    window.addEventListener(NavigationEventTypes.navigateExternal, this.externalNavigationHandler.bind(this));
+    window.addEventListener(ReportingEventTypes.error, this.errorHandler.bind(this));
+    this.initStore();
   }
 
   async firstRender() {
@@ -53,18 +58,27 @@ class ComponentPage extends DemoPage {
   }
 
   /**
+   * @param {GraphErrorEvent} e 
+   */
+  errorHandler(e) {
+    const { error, description, component } = e;
+    console.error(`[${component}]: ${description}`);
+    console.error(error);
+  }
+
+  async initStore() {
+    await this.store.init();
+    this.initialized = true;
+  }
+
+  /**
    * @param {Event} e 
    */
   async actionHandler(e) {
     const button = /** @type HTMLButtonElement */ (e.target);
     switch (button.id) {
-      case 'init': 
-        await this.store.init();
-        this.initialized = true;
-        break;
-      case 'loadApiGraph': 
-        this.loadDemoApi(button.dataset.src); 
-      break;
+      case 'init': this.initStore(); break;
+      case 'loadApiGraph': this.loadDemoApi(button.dataset.src); break;
       default: console.warn(`Unhandled action ${button.id}`);
     }
   }
@@ -87,6 +101,16 @@ class ComponentPage extends DemoPage {
     this.selectedId = graphId;
     this.selectedType = graphType;
     this.selectedOptions = options;
+  }
+
+  /**
+   * @param {APIExternalNavigationEvent} e
+   */
+  externalNavigationHandler(e) {
+    e.preventDefault();
+    const { url } = e;
+    console.log('Opening', url);
+    window.open(url);
   }
 
   contentTemplate() {

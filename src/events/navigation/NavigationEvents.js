@@ -24,10 +24,12 @@ export const NavigationEvents = {
    * @param {EventTarget} target A node on which to dispatch the event.
    * @param {string} url The URL to open
    * @param {ExternalNavigationOptions=} opts  Additional request parameters
+   * @returns {boolean} True when the event was cancelled meaning the navigation handled.
    */
   navigateExternal: (target, url, opts) => {
     const e = new Events.APIExternalNavigationEvent(url, opts);
     target.dispatchEvent(e);
+    return e.defaultPrevented;
   },
   /**
    * Dispatches the navigate help event

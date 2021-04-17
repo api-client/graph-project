@@ -167,7 +167,7 @@ section.opened .toggle-button.section {
   margin: 0 8px 0 0;
 }
 
-.schemes .list-item,
+.schemas .list-item,
 .documentation .list-item,
 .security .list-item {
   padding-left: var(--api-navigation-list-item-padded-padding, 24px);
@@ -219,5 +219,29 @@ section.opened .toggle-button.section {
   width: 100%;
   outline: none;
   background: transparent;
+}
+
+.rename {
+  width: 100%;
+  padding: 4px 2px;
+  font-size: 1rem;
+  border: none;
+  background-color: var(--api-navigation-rename-input-background-color, initial);
+  color: var(--api-navigation-rename-input-color, initial);
+}
+
+.input-item.add-external-doc-input {
+  margin-bottom: 8px;
+}
+
+.new-tab {
+  margin-left: 8px;
+  width: 20px;
+  height: 20px;
+  color: var(--api-navigation-new-tab-icon-color, #434343);
+}
+
+.empty-section {
+  padding-left: 16px;
 }
 `;

@@ -1,8 +1,10 @@
+/* eslint-disable no-continue */
 /* eslint-disable no-plusplus */
 /* eslint-disable prefer-destructuring */
 /* eslint-disable class-methods-use-this */
 import { LitElement, html } from 'lit-element';
 import { EventsTargetMixin } from '@advanced-rest-client/events-target-mixin';
+import { ns } from '@api-components/amf-helper-mixin/src/Namespace.js';
 import { styleMap } from 'lit-html/directives/style-map.js';
 import { classMap } from 'lit-html/directives/class-map.js';
 import { StoreEvents, StoreEventTypes, ApiSorting, EndpointsTree } from '@api-client/amf-store';
@@ -15,11 +17,16 @@ import { NavigationEvents } from './events/navigation/NavigationEvents.js';
 // import { NavigationEventTypes } from './events/navigation/EventTypes.js';
 import { TelemetryEvents } from './events/telemetry/TelemetryEvents.js';
 import { ReportingEvents } from './events/reporting/ReportingEvents.js';
+import { cancelEvent } from './Utils.js'
 
 /** @typedef {import('@api-client/amf-store').ApiEndPointWithOperationsListItem} ApiEndPointWithOperationsListItem */
 /** @typedef {import('@api-client/amf-store').ApiStoreStateCreateEvent} ApiStoreStateCreateEvent */
 /** @typedef {import('@api-client/amf-store').ApiStoreStateDeleteEvent} ApiStoreStateDeleteEvent */
 /** @typedef {import('@api-client/amf-store').ApiStoreStateUpdateEvent} ApiStoreStateUpdateEvent */
+/** @typedef {import('@api-client/amf-store').ApiEndPoint} ApiEndPoint */
+/** @typedef {import('@api-client/amf-store').ApiOperation} ApiOperation */
+/** @typedef {import('@api-client/amf-store').ApiDocumentation} ApiDocumentation */
+/** @typedef {import('@api-client/amf-store').ApiNodeShape} ApiNodeShape */
 /** @typedef {import('lit-html').TemplateResult} TemplateResult */
 /** @typedef {import('@anypoint-web-components/anypoint-collapse').AnypointCollapseElement} AnypointCollapseElement */
 /** @typedef {import('./types').EndpointItem} EndpointItem */
@@ -28,6 +35,9 @@ import { ReportingEvents } from './events/reporting/ReportingEvents.js';
 /** @typedef {import('./types').NodeShapeItem} NodeShapeItem */
 /** @typedef {import('./types').SecurityItem} SecurityItem */
 /** @typedef {import('./types').SelectableMenuItem} SelectableMenuItem */
+/** @typedef {import('./types').EditableMenuItem} EditableMenuItem */
+/** @typedef {import('./types').EditableMenuType} EditableMenuType */
+/** @typedef {import('./types').SchemaAddType} SchemaAddType */
 
 export const apiIdValue = Symbol('apiIdValue');
 export const isAsyncValue = Symbol('isAsyncValue');
@@ -43,7 +53,7 @@ export const openedEndpointsValue = Symbol('openedEndpointsValue');
 export const queryApi = Symbol('queryApi');
 export const queryEndpoints = Symbol('queryEndpoints');
 export const queryDocumentations = Symbol('queryDocumentations');
-export const querySchemes = Symbol('querySchemes');
+export const querySchemas = Symbol('querySchemas');
 export const querySecurity = Symbol('querySecurity');
 export const createFlatTreeItems = Symbol('createFlatTreeItems');
 export const getFilteredEndpoints = Symbol('getFilteredEndpoints');
@@ -106,6 +116,31 @@ export const cancelNewEndpoint = Symbol('cancelNewEndpoint');
 export const endpointCreatedHandler = Symbol('endpointCreatedHandler');
 export const endpointDeletedHandler = Symbol('endpointDeletedHandler');
 export const endpointUpdatedHandler = Symbol('endpointUpdatedHandler');
+export const operationCreatedHandler = Symbol('operationCreatedHandler');
+export const operationUpdatedHandler = Symbol('operationUpdatedHandler');
+export const operationDeletedHandler = Symbol('operationDeletedHandler');
+export const documentationCreatedHandler = Symbol('documentationCreatedHandler');
+export const documentationUpdatedHandler = Symbol('documentationUpdatedHandler');
+export const documentationDeletedHandler = Symbol('documentationDeletedHandler');
+export const schemaCreatedHandler = Symbol('schemaCreatedHandler');
+export const schemaUpdatedHandler = Symbol('schemaUpdatedHandler');
+export const schemaDeletedHandler = Symbol('schemaDeletedHandler');
+export const findViewModelItem = Symbol('findViewModelItem');
+export const renameInputTemplate = Symbol('renameInputTemplate');
+export const renameKeydownHandler = Symbol('renameKeydownHandler');
+export const renameBlurHandler = Symbol('renameBlurHandler');
+export const updateNameHandler = Symbol('updateNameHandler');
+export const addDocumentationInputTemplate = Symbol('addDocumentationInputTemplate');
+export const addDocumentationKeydownHandler = Symbol('addDocumentationKeydownHandler');
+export const addingDocumentationValue = Symbol('addingDocumentationValue');
+export const addingExternalValue = Symbol('addingExternalValue');
+export const commitNewDocumentation = Symbol('commitNewDocumentation');
+export const externalDocumentationHandler = Symbol('externalDocumentationHandler');
+export const addingSchemaValue = Symbol('addingSchemaValue');
+export const addSchemaInputTemplate = Symbol('addSchemaInputTemplate');
+export const addSchemaKeydownHandler = Symbol('addSchemaKeydownHandler');
+export const commitNewSchema = Symbol('commitNewSchema');
+export const addingSchemaTypeValue = Symbol('addingSchemaTypeValue');
 
 export default class GraphApiNavigationElement extends EventsTargetMixin(LitElement) {
   static get styles() {
@@ -177,9 +212,9 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   }
 
   /**
-   * @return {Boolean} true when has schemes definitions
+   * @return {Boolean} true when has schemas definitions
    */
-  get hasSchemes() {
+  get hasSchemas() {
     const items = this[schemasValue];
     return Array.isArray(items) && !!items.length;
   }
@@ -265,9 +300,9 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
        */
       documentationsOpened: { type: Boolean, reflect: true },
       /**
-       * Determines and changes state of schemes (types) panel.
+       * Determines and changes state of schemas (types) panel.
        */
-      schemesOpened: { type: Boolean, reflect: true },
+      schemasOpened: { type: Boolean, reflect: true },
       /**
        * Determines and changes state of security panel.
        */
@@ -327,7 +362,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     this.indentSize = 8;
     this.endpointsOpened = false;
     this.documentationsOpened = false;
-    this.schemesOpened = false;
+    this.schemasOpened = false;
     this.securityOpened = false;
     this.filter = false;
     this.edit = false;
@@ -376,6 +411,15 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     this[endpointCreatedHandler] = this[endpointCreatedHandler].bind(this);
     this[endpointDeletedHandler] = this[endpointDeletedHandler].bind(this);
     this[endpointUpdatedHandler] = this[endpointUpdatedHandler].bind(this);
+    this[operationCreatedHandler] = this[operationCreatedHandler].bind(this);
+    this[operationUpdatedHandler] = this[operationUpdatedHandler].bind(this);
+    this[operationDeletedHandler] = this[operationDeletedHandler].bind(this);
+    this[documentationCreatedHandler] = this[documentationCreatedHandler].bind(this);
+    this[documentationUpdatedHandler] = this[documentationUpdatedHandler].bind(this);
+    this[documentationDeletedHandler] = this[documentationDeletedHandler].bind(this);
+    this[schemaCreatedHandler] = this[schemaCreatedHandler].bind(this);
+    this[schemaUpdatedHandler] = this[schemaUpdatedHandler].bind(this);
+    this[schemaDeletedHandler] = this[schemaDeletedHandler].bind(this);
   }
 
   /**
@@ -412,6 +456,15 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     node.addEventListener(StoreEventTypes.Endpoint.State.created, this[endpointCreatedHandler]);
     node.addEventListener(StoreEventTypes.Endpoint.State.deleted, this[endpointDeletedHandler]);
     node.addEventListener(StoreEventTypes.Endpoint.State.updated, this[endpointUpdatedHandler]);
+    node.addEventListener(StoreEventTypes.Operation.State.created, this[operationCreatedHandler]);
+    node.addEventListener(StoreEventTypes.Operation.State.updated, this[operationUpdatedHandler]);
+    node.addEventListener(StoreEventTypes.Operation.State.deleted, this[operationDeletedHandler]);
+    node.addEventListener(StoreEventTypes.Documentation.State.created, this[documentationCreatedHandler]);
+    node.addEventListener(StoreEventTypes.Documentation.State.updated, this[documentationUpdatedHandler]);
+    node.addEventListener(StoreEventTypes.Documentation.State.deleted, this[documentationDeletedHandler]);
+    node.addEventListener(StoreEventTypes.Type.State.created, this[schemaCreatedHandler]);
+    node.addEventListener(StoreEventTypes.Type.State.updated, this[schemaUpdatedHandler]);
+    node.addEventListener(StoreEventTypes.Type.State.deleted, this[schemaDeletedHandler]);
   }
 
   /**
@@ -422,6 +475,15 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     node.removeEventListener(StoreEventTypes.Endpoint.State.created, this[endpointCreatedHandler]);
     node.removeEventListener(StoreEventTypes.Endpoint.State.deleted, this[endpointDeletedHandler]);
     node.removeEventListener(StoreEventTypes.Endpoint.State.updated, this[endpointUpdatedHandler]);
+    node.removeEventListener(StoreEventTypes.Operation.State.created, this[operationCreatedHandler]);
+    node.removeEventListener(StoreEventTypes.Operation.State.updated, this[operationUpdatedHandler]);
+    node.removeEventListener(StoreEventTypes.Operation.State.deleted, this[operationDeletedHandler]);
+    node.removeEventListener(StoreEventTypes.Documentation.State.created, this[documentationCreatedHandler]);
+    node.removeEventListener(StoreEventTypes.Documentation.State.updated, this[documentationUpdatedHandler]);
+    node.removeEventListener(StoreEventTypes.Documentation.State.deleted, this[documentationDeletedHandler]);
+    node.removeEventListener(StoreEventTypes.Type.State.created, this[schemaCreatedHandler]);
+    node.removeEventListener(StoreEventTypes.Type.State.updated, this[schemaUpdatedHandler]);
+    node.removeEventListener(StoreEventTypes.Type.State.deleted, this[schemaDeletedHandler]);
   }
 
   /**
@@ -438,7 +500,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     await this[queryApi](ctrl.signal);
     await this[queryEndpoints](ctrl.signal);
     await this[queryDocumentations](ctrl.signal);
-    await this[querySchemes](ctrl.signal);
+    await this[querySchemas](ctrl.signal);
     await this[querySecurity](ctrl.signal);
     this[queryingValue] = false;
     this[abortControllerValue] = undefined;
@@ -514,10 +576,10 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   }
 
   /**
-   * Queries and sets types (schemes) data
+   * Queries and sets types (schemas) data
    * @param {AbortSignal} signal
    */
-  async [querySchemes](signal) {
+  async [querySchemas](signal) {
     this[schemasValue] = undefined;
     if (signal.aborted) {
       return;
@@ -530,7 +592,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       this[schemasValue] = result;
     } catch (e) {
       TelemetryEvents.exception(this, e.message, false);
-      ReportingEvents.error(this, e, `Enable to query for Schemes data: ${e.message}`, this.localName);
+      ReportingEvents.error(this, e, `Enable to query for Schemas data: ${e.message}`, this.localName);
     }
   }
 
@@ -1092,8 +1154,8 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       const children = this[listSectionActiveNodes]('.documentation');
       result = result.concat(children);
     }
-    if (this.hasSchemes) {
-      const children = this[listSectionActiveNodes]('.schemes');
+    if (this.hasSchemas) {
+      const children = this[listSectionActiveNodes]('.schemas');
       result = result.concat(children);
     }
     if (this.hasSecurity) {
@@ -1252,7 +1314,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    */
   expandAll() {
     this.endpointsOpened = true;
-    this.schemesOpened = true;
+    this.schemasOpened = true;
     this.securityOpened = true;
     this.documentationsOpened = true;
     this.expandAllEndpoints();
@@ -1263,7 +1325,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    */
   collapseAll() {
     this.endpointsOpened = false;
-    this.schemesOpened = false;
+    this.schemasOpened = false;
     this.securityOpened = false;
     this.documentationsOpened = false;
     this.collapseAllEndpoints();
@@ -1305,6 +1367,45 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     this[addingEndpointValue] = true;
     await this.requestUpdate();
     const wrap = this.shadowRoot.querySelector('.add-endpoint-input');
+    wrap.scrollIntoView();
+    const input = wrap.querySelector('input');
+    input.focus();
+    input.select();
+  }
+
+  /**
+   * Triggers a flow when the user can define a new documentation document.
+   * This renders an input in the view (in the documentation list) where the user can enter the name.
+   * @param {boolean=} isExternal Whether the documentation is a link to a www document.
+   */
+  async addDocumentation(isExternal=false) {
+    if (!this.documentationsOpened) {
+      this.documentationsOpened = true;
+    }
+    this[addingDocumentationValue] = true;
+    this[addingExternalValue] = isExternal;
+    await this.requestUpdate();
+    const selector = isExternal ? '.add-external-doc-input' : '.add-documentation-input';
+    const wrap = this.shadowRoot.querySelector(selector);
+    wrap.scrollIntoView();
+    const input = wrap.querySelector('input');
+    input.focus();
+    input.select();
+  }
+
+  /**
+   * Triggers a flow when the user can define a new schema in the navigation.
+   * This renders an input in the view (in the schema list) where the user can enter the schema name.
+   * @param {SchemaAddType=} type The type of the schema to add. Default to `object`.
+   */
+  async addSchema(type='object') {
+    if (!this.schemasOpened) {
+      this.schemasOpened = true;
+    }
+    this[addingSchemaValue] = true;
+    this[addingSchemaTypeValue] = type;
+    await this.requestUpdate();
+    const wrap = this.shadowRoot.querySelector('.add-schema-input');
     wrap.scrollIntoView();
     const input = wrap.querySelector('input');
     input.focus();
@@ -1361,6 +1462,40 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     }
   }
 
+  /**
+   * Event handler for the keydown event of the add documentation input.
+   * @param {KeyboardEvent} e
+   */
+  [addDocumentationKeydownHandler](e) {
+    if (e.key === 'Enter' || e.key === 'NumpadEnter') {
+      e.preventDefault();
+      const input = /** @HTMLInputElement */ (e.target);
+      this[commitNewDocumentation](input.value);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      this[addingDocumentationValue] = false;
+      this[addingExternalValue] = undefined;
+      this.requestUpdate();
+    }
+  }
+
+  /**
+   * Event handler for the keydown event of the add schema input.
+   * @param {KeyboardEvent} e
+   */
+  [addSchemaKeydownHandler](e) {
+    if (e.key === 'Enter' || e.key === 'NumpadEnter') {
+      e.preventDefault();
+      const input = /** @HTMLInputElement */ (e.target);
+      this[commitNewSchema](input.value);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      this[addingSchemaValue] = false;
+      this[addingSchemaTypeValue] = undefined;
+      this.requestUpdate();
+    }
+  }
+
   async [commitNewEndpoint]() {
     const input = /** @type HTMLInputElement */ (this.shadowRoot.querySelector('.add-endpoint-input input'))
     if (!input) {
@@ -1377,6 +1512,51 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   async [cancelNewEndpoint]() {
     this[addingEndpointValue] = false;
     await this.requestUpdate();
+  }
+
+  /**
+   * @param {string} value The title of the documentation.
+   */
+  async [commitNewDocumentation](value='') {
+    const name = value.trim();
+    if (!name) {
+      return;
+    }
+    const opts = { title: name };
+    const isExternal = this[addingExternalValue];
+    if (isExternal) {
+      const input = /** @type HTMLInputElement */ (this.shadowRoot.querySelector('.add-external-doc-input input'))
+      opts.url = input.value;
+    }
+    this[addingDocumentationValue] = false;
+    this[addingExternalValue] = undefined;
+    await StoreEvents.Documentation.add(this, opts);
+    this.requestUpdate();
+  }
+
+  /**
+   * @param {string} value The name of the schema.
+   */
+  async [commitNewSchema](value='') {
+    const name = value.trim();
+    if (!name) {
+      return;
+    }
+    const type = this[addingSchemaTypeValue];
+    const opts = { name };
+
+    switch (type) {
+      case 'object': opts.type = ns.w3.shacl.NodeShape; break;
+      case 'scalar': opts.type = ns.aml.vocabularies.shapes.ScalarShape; break;
+      case 'array': opts.type = ns.aml.vocabularies.shapes.ArrayShape; break;
+      case 'file': opts.type = ns.aml.vocabularies.shapes.FileShape; break;
+      case 'union': opts.type = ns.aml.vocabularies.shapes.UnionShape; break;
+      default:
+    }
+    this[addingSchemaValue] = false;
+    this[addingSchemaTypeValue] = undefined;
+    await StoreEvents.Type.add(this, opts);
+    this.requestUpdate();
   }
 
   /**
@@ -1420,6 +1600,307 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     await this[queryEndpoints](ctrl.signal);
     this[abortControllerValue] = undefined;
     this.requestUpdate();
+  }
+
+  /**
+   * @param {ApiStoreStateCreateEvent} e
+   */
+  async [operationCreatedHandler](e) {
+    if (e.defaultPrevented) {
+      return;
+    }
+    const { domainParent } = e.detail;
+    const operation = /** @type ApiOperation */ (e.detail.item);
+    const item = /** @type OperationItem */ ({
+      id: operation.id,
+      method: operation.method,
+      name: operation.name,
+    });
+    const items = this[endpointsValue];
+    const endpoint = items.find((ep) => ep.id === domainParent);
+    endpoint.operations.push(item);
+    this.requestUpdate();
+  }
+
+  /**
+   * @param {ApiStoreStateUpdateEvent} e
+   */
+  async [operationUpdatedHandler](e) {
+    const { property, graphId } = e.detail;
+    if (!['name', 'method'].includes(property)) {
+      return;
+    }
+    const model = /** @type OperationItem */ (this[findViewModelItem](graphId));
+    if (!model) {
+      return;
+    }
+    const operation = /** @type ApiOperation */ (e.detail.item);
+    model.name = operation.name;
+    model.method = operation.method;
+    this.requestUpdate();
+  }
+
+  /**
+   * @param {ApiStoreStateDeleteEvent} e
+   */
+  async [operationDeletedHandler](e) {
+    const endpoints = this[endpointsValue];
+    if (!endpoints || !endpoints.length) {
+      return;
+    }
+    const { graphId } = e.detail;
+    for (let i = 0, len = endpoints.length; i < len; i++) {
+      const endpoint = endpoints[i];
+      const index = endpoint.operations.findIndex((item) => item.id === graphId);
+      if (index === -1) {
+        continue;
+      }
+      endpoint.operations.splice(index, 1);
+      this.requestUpdate();
+      return;
+    }
+  }
+
+  /**
+   * @param {ApiStoreStateCreateEvent} e
+   */
+  async [documentationCreatedHandler](e) {
+    if (e.defaultPrevented) {
+      return;
+    }
+    const documentation = /** @type ApiDocumentation */ (e.detail.item);
+    if (!this[documentationsValue]) {
+      this[documentationsValue] = [];
+    }
+    this[documentationsValue].push(documentation);
+    this.requestUpdate();
+  }
+
+  /**
+   * @param {ApiStoreStateUpdateEvent} e
+   */
+  async [documentationUpdatedHandler](e) {
+    const { property, graphId } = e.detail;
+    if (!['url', 'title'].includes(property)) {
+      return;
+    }
+    const model = /** @type DocumentationItem */ (this[findViewModelItem](graphId));
+    if (!model) {
+      return;
+    }
+    const documentation = /** @type ApiDocumentation */ (e.detail.item);
+    model.url = documentation.url;
+    model.title = documentation.title;
+    this.requestUpdate();
+  }
+
+  /**
+   * @param {ApiStoreStateDeleteEvent} e
+   */
+  async [documentationDeletedHandler](e) {
+    const items = this[documentationsValue];
+    if (!items || !items.length) {
+      return;
+    }
+    const { graphId } = e.detail;
+    const index = items.findIndex((item) => item.id === graphId);
+    if (index === -1) {
+      return;
+    }
+    items.splice(index, 1);
+    this.requestUpdate();
+  }
+
+  /**
+   * @param {ApiStoreStateCreateEvent} e
+   */
+  async [schemaCreatedHandler](e) {
+    const schema = /** @type ApiNodeShape */ (e.detail.item);
+    if (!this[schemasValue]) {
+      this[schemasValue] = [];
+    }
+    const item = /** @type NodeShapeItem */ ({
+      id: schema.id,
+      name: schema.name,
+      displayName: schema.displayName,
+    });
+    this[schemasValue].push(item);
+    this.requestUpdate();
+  }
+
+  /**
+   * @param {ApiStoreStateUpdateEvent} e
+   */
+  async [schemaUpdatedHandler](e) {
+    const { property, graphId } = e.detail;
+    if (!['name', 'displayName'].includes(property)) {
+      return;
+    }
+    const model = /** @type NodeShapeItem */ (this[findViewModelItem](graphId));
+    if (!model) {
+      return;
+    }
+    const schema = /** @type ApiNodeShape */ (e.detail.item);
+    model.name = schema.name;
+    model.displayName = schema.displayName;
+    this.requestUpdate();
+  }
+
+  /**
+   * @param {ApiStoreStateDeleteEvent} e
+   */
+  async [schemaDeletedHandler](e) {
+    const items = this[schemasValue];
+    if (!items || !items.length) {
+      return;
+    }
+    const { graphId } = e.detail;
+    const index = items.findIndex((item) => item.id === graphId);
+    if (index === -1) {
+      return;
+    }
+    items.splice(index, 1);
+    this.requestUpdate();
+  }
+
+  /**
+   * Triggers a rename action for the menu item identified by the `id`.
+   * @param {string} id The domain id of the item to edit.
+   */
+  async renameAction(id) {
+    const item = this[findViewModelItem](id);
+    if (!item) {
+      return;
+    }
+    item.nameEditor = true;
+    await this.requestUpdate();
+    const input = /** @type HTMLInputElement */ (this.shadowRoot.querySelector(`input[data-id="${id}"]`));
+    input.select();
+    input.focus();
+  }
+
+  /**
+   * @param {string} id The domain id of the item to find.
+   * @returns {SelectableMenuItem & EditableMenuItem | null}
+   */
+  [findViewModelItem](id) {
+    const endpoints = this[endpointsValue];
+    if (endpoints && endpoints.length) {
+      for (let i = 0, len = endpoints.length; i < len; i++) {
+        const endpoint = endpoints[i];
+        if (endpoint.id === id) {
+          return endpoint;
+        }
+        const operation = endpoint.operations.find((op) => op.id === id);
+        if (operation) {
+          return operation;
+        }
+      }
+    }
+    const docs = this[documentationsValue];
+    if (docs && docs.length) {
+      const doc = docs.find((item) => item.id === id);
+      if (doc) {
+        return doc;
+      }
+    }
+    const schemas = this[schemasValue];
+    if (schemas && schemas.length) {
+      const schema = schemas.find((item) => item.id === id);
+      if (schema) {
+        return schema;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * A key down event handler on the rename input
+   * @param {KeyboardEvent} e
+   */
+  async [renameKeydownHandler](e) {
+    // do not interfere with the navigation logic.
+    e.stopPropagation();
+    if (!['Enter', 'NumpadEnter', 'Escape'].includes(e.code)) {
+      return;
+    }
+    e.preventDefault();
+    const input = /** @type HTMLInputElement */ (e.target);
+    const { value, dataset } = input;
+    const { id, type } = dataset;
+    const item = this[findViewModelItem](id);
+    if (!item) {
+      return;
+    }
+    item.nameEditor = false;
+    this.requestUpdate();
+    if (e.code === 'Escape') {
+      return;
+    }
+    await this[updateNameHandler](id, value, /** @type EditableMenuType */ (type));
+  }
+
+  /**
+   * A blur event handler on the rename input
+   * @param {Event} e
+   */
+  async [renameBlurHandler](e) {
+    const input = /** @type HTMLInputElement */ (e.target);
+    const { value, dataset } = input;
+    const { id, type } = dataset;
+    const item = this[findViewModelItem](id);
+    if (!item) {
+      return;
+    }
+    item.nameEditor = false;
+    this.requestUpdate();
+    await this[updateNameHandler](id, value, /** @type EditableMenuType */ (type));
+  }
+
+  /**
+   * Updates the name or the display name of the menu object
+   * @param {string} id The id of the domain object to update
+   * @param {string} value The new value.
+   * @param {EditableMenuType} type The object type
+   * @returns {Promise<void>} A promise when the update operation finish.
+   */
+  async [updateNameHandler](id, value, type) {
+    const updateValue = value.trim();
+    if (!updateValue) {
+      return;
+    }
+    let promise;
+    if (type === 'endpoint') {
+      promise = StoreEvents.Endpoint.update(this, id, 'name', updateValue);
+    } else if (type === 'operation') {
+      promise = StoreEvents.Operation.update(this, id, 'name', updateValue);
+    } else if (type === 'documentation') {
+      promise = StoreEvents.Documentation.update(this, id, 'title', updateValue);
+    } else if (type === 'schema') {
+      const obj = await StoreEvents.Type.get(this, id);
+      const { displayName } = obj;
+      const prop = displayName ? 'displayName' : 'name';
+      promise = StoreEvents.Type.update(this, id, prop, updateValue);
+    }
+    try {
+      await promise;
+    } catch (e) {
+      ReportingEvents.error(this, e, `Unable rename object: ${e.message}`, 'graph-api-navigation');
+    }
+  }
+
+  /**
+   * Click handler for the external navigation item.
+   * Dispatches the external navigation event. When this event is handled (cancelled)
+   * the original event is cancelled to prevent default behavior.
+   * @param {Event} e
+   */
+  [externalDocumentationHandler](e) {
+    const a = /** @type HTMLAnchorElement  */ (e.currentTarget);
+    const handled = NavigationEvents.navigateExternal(this, a.href);
+    if (handled) {
+      cancelEvent(e);
+    }
   }
 
   render() {
@@ -1471,11 +1952,13 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    * @return {TemplateResult|string} The template for the list of endpoints.
    */
   [endpointsTemplate]() {
-    if (!this.hasEndpoints) {
+    const { edit } = this;
+    if (!this.hasEndpoints && !edit) {
       return '';
     }
     const items = this[getFilteredEndpoints]();
-    if (!items || !items.length) {
+    const hasItems = !!items && !!items.length;
+    if (!hasItems && !edit) {
       return '';
     }
     const { endpointsOpened } = this;
@@ -1486,6 +1969,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       opened: endpointsOpened,
     };
     const addingEndpoint = this[addingEndpointValue];
+    const showEmpty = !hasItems && !addingEndpoint;
     return html`
     <section
       class="${classMap(classes)}"
@@ -1517,8 +2001,9 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
         role="menu"
       >
         <div class="children">
-          ${items.map(item => this[endpointTemplate](item))}
           ${addingEndpoint ? this[addEndpointInputTemplate]() : ''}
+          ${hasItems ? items.map((item) => this[endpointTemplate](item)) : ''}
+          ${showEmpty ? html`<p class="empty-section">No endpoints in this API</p>` : ''}
         </div>
       </anypoint-collapse>
     </section>
@@ -1530,7 +2015,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    * @return {TemplateResult} The template for an endpoint.
    */
   [endpointTemplate](item) {
-    const { indent, operations, label, path, id, selected, secondarySelected } = item;
+    const { indent, operations, label, path, id, selected, secondarySelected, nameEditor } = item;
     const itemStyles = {
       paddingLeft: this[computeEndpointPaddingValue](indent),
     };
@@ -1557,8 +2042,13 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       role="menuitem"
       aria-haspopup="true"
     >
-      ${renderChildren ?  this[endpointToggleTemplate](id): html`<div class="endpoint-toggle-mock"></div>`}
-      <div class="endpoint-name">${label}</div>
+      ${nameEditor ? 
+        this[renameInputTemplate](id, label, 'endpoint') 
+        : html`
+        ${renderChildren ?  this[endpointToggleTemplate](id): html`<div class="endpoint-toggle-mock"></div>`}
+        <div class="endpoint-name">${label}</div>
+        `
+      }
     </div>
     ${renderChildren ? html`
       <anypoint-collapse
@@ -1598,7 +2088,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    * @return {TemplateResult} The template for an operation list item.
    */
   [operationItemTemplate](item, op) {
-    const { id, name, method, selected, secondarySelected } = op;
+    const { id, name, method, selected, secondarySelected, nameEditor } = op;
     const itemStyles = {
       paddingLeft: this[computeOperationPaddingValue](item.indent),
     };
@@ -1617,12 +2107,18 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       data-graph-parent="${item.id}"
       data-graph-id="${id}"
       data-graph-shape="operation"
+      data-operation="${method}"
       @click="${this[itemClickHandler]}"
       @keydown="${this[itemKeydownHandler]}"
       style="${styleMap(itemStyles)}"
     >
-      <span class="method-label" data-method="${method}">${method}</span>
-      ${name}
+      ${nameEditor ? 
+        this[renameInputTemplate](id, name, 'operation') 
+        : html`
+        <span class="method-label" data-method="${method}">${method}</span>
+        ${name}
+        `
+      }
     </div>
     `;
   }
@@ -1631,8 +2127,9 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    * @return {TemplateResult|string} The template for the documentations section.
    */
   [documentationsTemplate]() {
+    const { edit } = this;
     const items = this[getFilteredDocumentations]();
-    if (!items.length) {
+    if (!items.length && !edit) {
       return '';
     }
     const { documentationsOpened } = this;
@@ -1641,6 +2138,9 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       opened: documentationsOpened,
     };
     const toggleState = documentationsOpened ? 'Expanded' : 'Collapsed';
+    const addingDocumentation = this[addingDocumentationValue];
+    const showItems = !!items.length;
+    const showEmpty = !showItems && !addingDocumentation;
     return html`
     <section
       class="${classMap(classes)}"
@@ -1668,7 +2168,9 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       </div>
       <anypoint-collapse .opened="${documentationsOpened}">
         <div class="children">
-          ${items.map((item) => this[documentationTemplate](item))}
+          ${addingDocumentation ? this[addDocumentationInputTemplate]() : ''}
+          ${showItems ? items.map((item) => this[documentationTemplate](item)) : ''}
+          ${showEmpty ? html`<p class="empty-section">No documentations in this API</p>` : ''}
         </div>
       </anypoint-collapse>
     </section>
@@ -1683,7 +2185,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     if (item.url) {
       return this[externalDocumentationTemplate](item);
     }
-    const { title, id, selected, secondarySelected } = item;
+    const { title, id, selected, secondarySelected, nameEditor } = item;
     const classes = {
       'list-item': true,
       selected, 
@@ -1699,7 +2201,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       @click="${this[itemClickHandler]}"
       @keydown="${this[itemKeydownHandler]}"
     >
-      ${title}
+      ${nameEditor ? this[renameInputTemplate](id, title, 'documentation') : title}
     </div>`;
   }
 
@@ -1708,7 +2210,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    * @return {TemplateResult} The template for the external documentation list item.
    */
   [externalDocumentationTemplate](item) {
-    const { title, url, id, selected, secondarySelected } = item;
+    const { title, url, id, selected, secondarySelected, nameEditor } = item;
     const classes = {
       'list-item': true,
       selected, 
@@ -1722,9 +2224,15 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       tabindex="-1"
       data-graph-id="${id}"
       data-graph-shape="documentation"
+      @click="${this[externalDocumentationHandler]}"
     >
-      ${title}
-      <arc-icon class="icon new-tab" title="Opens in a new tab" icon="openInNew"></arc-icon>
+      ${nameEditor ? 
+        this[renameInputTemplate](id, title, 'documentation') 
+        : html`
+        ${title}
+        <arc-icon class="icon new-tab" title="Opens in a new tab" icon="openInNew"></arc-icon>
+        `
+      }
     </a>`;
   }
 
@@ -1732,23 +2240,27 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    * @return {TemplateResult|string} The template for the types (schemas) section.
    */
   [schemasTemplate]() {
+    const { edit } = this;
     const items = this[getFilteredSchemas]();
-    if (!items.length) {
+    if (!items.length && !edit) {
       return '';
     }
-    const { schemesOpened } = this;
+    const { schemasOpened } = this;
     const classes = {
-      schemes: true,
-      opened: schemesOpened,
+      schemas: true,
+      opened: schemasOpened,
     };
-    const toggleState = schemesOpened ? 'Expanded' : 'Collapsed';
+    const toggleState = schemasOpened ? 'Expanded' : 'Collapsed';
+    const addingSchema = this[addingSchemaValue];
+    const showItems = !!items.length;
+    const showEmpty = !showItems && !addingSchema;
     return html`
     <section
       class="${classMap(classes)}"
     >
       <div
         class="section-title"
-        data-property="schemesOpened"
+        data-property="schemasOpened"
         data-section="schemas"
         @click="${this[toggleSectionClickHandler]}"
         @keydown="${this[toggleSectionKeydownHandler]}"
@@ -1756,7 +2268,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
         aria-haspopup="true"
         role="menuitem"
       >
-        <div class="title-h3">Schemes</div>
+        <div class="title-h3">Schemas</div>
         <anypoint-icon-button
           part="toggle-button"
           class="toggle-button section"
@@ -1767,9 +2279,11 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
           <arc-icon aria-label="${toggleState}" icon="keyboardArrowDown"></arc-icon>
         </anypoint-icon-button>
       </div>
-      <anypoint-collapse .opened="${schemesOpened}">
+      <anypoint-collapse .opened="${schemasOpened}">
         <div class="children">
-          ${items.map((item) => this[schemaTemplate](item))}
+          ${addingSchema ? this[addSchemaInputTemplate]() : ''}
+          ${showItems ? items.map((item) => this[schemaTemplate](item)) : ''}
+          ${showEmpty ? html`<p class="empty-section">No schemas in this API</p>` : ''}
         </div>
       </anypoint-collapse>
     </section>
@@ -1781,7 +2295,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    * @return {TemplateResult} The template for the documentation list item.
    */
   [schemaTemplate](item) {
-    const { id, displayName, name, selected, secondarySelected } = item;
+    const { id, displayName, name, selected, secondarySelected, nameEditor } = item;
     const label = displayName || name || 'Unnamed schema';
     const classes = {
       'list-item': true,
@@ -1799,7 +2313,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       @click="${this[itemClickHandler]}"
       @keydown="${this[itemKeydownHandler]}"
     >
-      ${label}
+      ${nameEditor ? this[renameInputTemplate](id, label, 'schema') : label}
    </div>`;
   }
 
@@ -1914,6 +2428,79 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       <input type="text" class="add-endpoint-input" @keydown="${this[addEndpointKeydownHandler]}"/>
       <arc-icon icon="add" title="Enter to save, ESC to cancel"></arc-icon>
     </div>
+    `;
+  }
+
+  /**
+   * @return {TemplateResult} The template for the new documentation input.
+   */
+  [addDocumentationInputTemplate]() {
+    const isExternal = this[addingExternalValue];
+    return html`
+    ${isExternal ? html`
+    <div
+      part="api-navigation-input-item"
+      class="input-item add-external-doc-input"
+    >
+      <input 
+        type="url" 
+        class="add-external-doc-input" 
+        aria-label="Enter the documentation URL"
+        placeholder="Documentation URL"
+      />
+    </div>
+    ` : ''}
+    <div
+      part="api-navigation-input-item"
+      class="input-item add-documentation-input"
+      data-graph-shape="documentation"
+    >
+      <input 
+        type="text" 
+        class="add-documentation-input" 
+        aria-label="Enter name for the documentation"
+        placeholder="Documentation title"
+        @keydown="${this[addDocumentationKeydownHandler]}"/>
+      <arc-icon icon="add" title="Enter to save, ESC to cancel"></arc-icon>
+    </div>
+    `;
+  }
+
+  /**
+   * @return {TemplateResult} The template for the new schema input.
+   */
+  [addSchemaInputTemplate]() {
+    return html`
+    <div
+      part="api-navigation-input-item"
+      class="input-item add-schema-input"
+      data-graph-shape="schema"
+    >
+      <input type="text" class="add-schema-input" @keydown="${this[addSchemaKeydownHandler]}"/>
+      <arc-icon icon="add" title="Enter to save, ESC to cancel"></arc-icon>
+    </div>
+    `;
+  }
+
+  /**
+   * @param {string} id The domain id of the item being edited
+   * @param {string} label The current name to render.
+   * @param {EditableMenuType} type
+   * @returns {TemplateResult} The template for the rename input. 
+   */
+  [renameInputTemplate](id, label='', type) {
+    return html`
+    <input 
+      type="text" 
+      .value="${label}" 
+      required
+      class="rename"
+      data-id="${id}"
+      data-type="${type}"
+      @click="${cancelEvent}"
+      @keydown="${this[renameKeydownHandler]}"
+      @blur="${this[renameBlurHandler]}"
+    />
     `;
   }
 }
