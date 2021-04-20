@@ -1,0 +1,224 @@
+{
+  "version": "experimental",
+  "tags": [
+    {
+      "name": "graph-api-navigation",
+      "path": "./graph-api-navigation.js",
+      "attributes": [
+        {
+          "name": "apiId",
+          "description": "When this property change the element queries the graph store for the data model.\nIt can be skipped when the application calls the `queryGraph()` method imperatively.",
+          "type": "string"
+        },
+        {
+          "name": "selected",
+          "description": "A model `@id` of selected documentation part.\nSpecial case is for `summary` view. It's not part of an API\nbut most applications has some kins of summary view for the\nAPI.",
+          "type": "string"
+        },
+        {
+          "name": "selectedType",
+          "description": "Type of the selected item.\nOne of `documentation`, `type`, `security`, `endpoint`, `operation`\nor `summary`.\n\nThis property is set after `selected` property.",
+          "type": "string"
+        },
+        {
+          "name": "summary",
+          "description": "If set it renders `API summary` menu option.\nIt will allow to set `selected` and `selectedType` to `summary`\nwhen this option is set.",
+          "type": "boolean"
+        },
+        {
+          "name": "summaryLabel",
+          "description": "A label for the `summary` section.",
+          "type": "string"
+        },
+        {
+          "name": "documentationsOpened",
+          "description": "Determines and changes state of documentation panel.",
+          "type": "boolean"
+        },
+        {
+          "name": "schemasOpened",
+          "description": "Determines and changes state of schemas (types) panel.",
+          "type": "boolean"
+        },
+        {
+          "name": "securityOpened",
+          "description": "Determines and changes state of security panel.",
+          "type": "boolean"
+        },
+        {
+          "name": "endpointsOpened",
+          "description": "Determines and changes state of endpoints panel.",
+          "type": "boolean"
+        },
+        {
+          "name": "query",
+          "description": "Filters list elements by this value when set.\nClear the value to reset the search.\n\nThis is not currently exposed in element's UI due\nto complexity of search and performance.",
+          "type": "string"
+        },
+        {
+          "name": "indentSize",
+          "description": "Size of endpoint indentation for nested resources.\nIn pixels.\n\nThe attribute name for this property is `indent-size`. Note, that this\nwill change to web consistent name `indentSize` in the future.",
+          "type": "number"
+        },
+        {
+          "name": "sort",
+          "description": "By default the endpoints are rendered one-by-one as defined in the API spec file\nwithout any tree structure. When this option is set it sorts the endpoints \nalphabetically and creates a tree structure for the endpoints.\nNote, the resulted tree structure will likely be different to the one encoded \nin the API spec file.",
+          "type": "boolean"
+        },
+        {
+          "name": "filter",
+          "description": "When set it renders an input to filter the menu items.",
+          "type": "boolean"
+        },
+        {
+          "name": "manualQuery",
+          "description": "When set the element won't query the store when attached to the DOM.\nInstead set the `apiId` property or directly call the `queryGraph()` function.",
+          "type": "boolean"
+        },
+        {
+          "name": "edit",
+          "description": "When set it enables graph items editing functionality.\nThe user can double-click on a menu item and edit its name.",
+          "type": "boolean"
+        }
+      ],
+      "properties": [
+        {
+          "name": "querying",
+          "description": "When true then the element is currently querying for the graph data.",
+          "type": "boolean"
+        },
+        {
+          "name": "abortController",
+          "description": "Set only when `querying`. Use to abort the query operation.\nWhen calling `abort` on the controller the element stops querying and processing the graph data.\nAll data that already has been processed are not cleared.",
+          "type": "AbortController | undefined"
+        },
+        {
+          "name": "hasDocs",
+          "type": "boolean"
+        },
+        {
+          "name": "hasSchemas",
+          "type": "boolean"
+        },
+        {
+          "name": "hasSecurity",
+          "type": "boolean"
+        },
+        {
+          "name": "hasEndpoints",
+          "type": "boolean"
+        },
+        {
+          "name": "selectedItem",
+          "description": "A reference to currently selected element.",
+          "type": "HTMLElement | undefined"
+        },
+        {
+          "name": "focusedItem",
+          "description": "The currently focused item.",
+          "type": "HTMLElement | undefined"
+        },
+        {
+          "name": "apiId",
+          "attribute": "apiId",
+          "description": "When this property change the element queries the graph store for the data model.\nIt can be skipped when the application calls the `queryGraph()` method imperatively.",
+          "type": "string"
+        },
+        {
+          "name": "selected",
+          "attribute": "selected",
+          "description": "A model `@id` of selected documentation part.\nSpecial case is for `summary` view. It's not part of an API\nbut most applications has some kins of summary view for the\nAPI.",
+          "type": "string"
+        },
+        {
+          "name": "selectedType",
+          "attribute": "selectedType",
+          "description": "Type of the selected item.\nOne of `documentation`, `type`, `security`, `endpoint`, `operation`\nor `summary`.\n\nThis property is set after `selected` property.",
+          "type": "string"
+        },
+        {
+          "name": "summary",
+          "attribute": "summary",
+          "description": "If set it renders `API summary` menu option.\nIt will allow to set `selected` and `selectedType` to `summary`\nwhen this option is set.",
+          "type": "boolean"
+        },
+        {
+          "name": "summaryLabel",
+          "attribute": "summaryLabel",
+          "description": "A label for the `summary` section.",
+          "type": "string"
+        },
+        {
+          "name": "documentationsOpened",
+          "attribute": "documentationsOpened",
+          "description": "Determines and changes state of documentation panel.",
+          "type": "boolean"
+        },
+        {
+          "name": "schemasOpened",
+          "attribute": "schemasOpened",
+          "description": "Determines and changes state of schemas (types) panel.",
+          "type": "boolean"
+        },
+        {
+          "name": "securityOpened",
+          "attribute": "securityOpened",
+          "description": "Determines and changes state of security panel.",
+          "type": "boolean"
+        },
+        {
+          "name": "endpointsOpened",
+          "attribute": "endpointsOpened",
+          "description": "Determines and changes state of endpoints panel.",
+          "type": "boolean"
+        },
+        {
+          "name": "query",
+          "attribute": "query",
+          "description": "Filters list elements by this value when set.\nClear the value to reset the search.\n\nThis is not currently exposed in element's UI due\nto complexity of search and performance.",
+          "type": "string"
+        },
+        {
+          "name": "indentSize",
+          "attribute": "indentSize",
+          "description": "Size of endpoint indentation for nested resources.\nIn pixels.\n\nThe attribute name for this property is `indent-size`. Note, that this\nwill change to web consistent name `indentSize` in the future.",
+          "type": "number"
+        },
+        {
+          "name": "sort",
+          "attribute": "sort",
+          "description": "By default the endpoints are rendered one-by-one as defined in the API spec file\nwithout any tree structure. When this option is set it sorts the endpoints \nalphabetically and creates a tree structure for the endpoints.\nNote, the resulted tree structure will likely be different to the one encoded \nin the API spec file.",
+          "type": "boolean"
+        },
+        {
+          "name": "filter",
+          "attribute": "filter",
+          "description": "When set it renders an input to filter the menu items.",
+          "type": "boolean"
+        },
+        {
+          "name": "manualQuery",
+          "attribute": "manualQuery",
+          "description": "When set the element won't query the store when attached to the DOM.\nInstead set the `apiId` property or directly call the `queryGraph()` function.",
+          "type": "boolean"
+        },
+        {
+          "name": "edit",
+          "attribute": "edit",
+          "description": "When set it enables graph items editing functionality.\nThe user can double-click on a menu item and edit its name.",
+          "type": "boolean"
+        },
+        {
+          "name": "eventsTarget",
+          "description": "By default the element listens on the `window` object. If this value is set,\nthen all events listeners will be attached to this object instead of `window`.",
+          "type": "EventTarget"
+        }
+      ],
+      "events": [
+        {
+          "name": "graphload"
+        }
+      ]
+    }
+  ]
+}
