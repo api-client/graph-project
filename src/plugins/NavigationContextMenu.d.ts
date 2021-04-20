@@ -4,7 +4,7 @@ export declare class NavigationContextMenu extends ContextMenu {
   /**
    * Finds the click target which
    */
-  findTarget(e: PointerEvent): HTMLElement|SVGElement|undefined;
+  findTarget(e: MouseEvent): HTMLElement|SVGElement|undefined;
 
   /**
    * Maps an element to an internal target name.

@@ -1,9 +1,12 @@
-import { fixture, assert, html } from '@open-wc/testing';
+import { fixture, assert, html, nextFrame } from '@open-wc/testing';
+import sinon from 'sinon';
 import '../../graph-api-navigation.js';
 import { 
   computeEndpointPaddingLeft,
   computeOperationPaddingLeft,
   computeOperationPaddingValue,
+  itemsValue,
+  openedEndpointsValue,
 } from '../../src/GraphApiNavigationElement.js';
 
 /** @typedef {import('../..').GraphApiNavigationElement} GraphApiNavigationElement */
@@ -22,6 +25,13 @@ describe('GraphApiNavigationElement', () => {
      */
     async function summaryFixture() {
       return fixture(html`<graph-api-navigation summary></graph-api-navigation>`);
+    }
+
+    /**
+     * @returns {Promise<GraphApiNavigationElement>}
+     */
+    async function manualFixture() {
+      return fixture(html`<graph-api-navigation manualQuery></graph-api-navigation>`);
     }
 
     describe('No data rendering', () => {
@@ -156,5 +166,64 @@ describe('GraphApiNavigationElement', () => {
       });
     });
 
+    describe('#apiId', () => {
+      let element = /** @type GraphApiNavigationElement */ (null);
+      beforeEach(async () => { element = await summaryFixture() });
+  
+      it('calls queryGraph() when changes', async () => {
+        const spy = sinon.spy(element, 'queryGraph');
+        element.apiId = 'test';
+        assert.isTrue(spy.called, 'the function was called');
+        await nextFrame();
+      });
+  
+      it('calls queryGraph() only once', async () => {
+        element.apiId = 'test';
+        await nextFrame();
+        const spy = sinon.spy(element, 'queryGraph');
+        element.apiId = 'test';
+        assert.isFalse(spy.called);
+      });
+    });
+
+    describe('queryGraph()', () => {
+      let element = /** @type GraphApiNavigationElement */ (null);
+      beforeEach(async () => { element = await manualFixture() });
+  
+      it('sets the [queryingValue] property', async () => {
+        const p = element.queryGraph();
+        assert.isTrue(element.querying);
+        await p;
+      });
+  
+      it('clears the [itemsValue] property', async () => {
+        element[itemsValue] = [];
+        const p = element.queryGraph();
+        assert.isUndefined(element[itemsValue]);
+        await p;
+      });
+
+      it('sets the [abortControllerValue] property', async () => {
+        const p = element.queryGraph();
+        assert.ok(element.abortController);
+        await p;
+      });
+      
+      it('clears the [abortControllerValue] property after the query', async () => {
+        await element.queryGraph();
+        assert.isUndefined(element.abortController);
+      });
+      
+      it('clears the [queryingValue] property after the query', async () => {
+        await element.queryGraph();
+        assert.isFalse(element.querying);
+      });
+      
+      it('clears the [openedEndpointsValue] property after the query', async () => {
+        element[openedEndpointsValue] = ['test'];
+        await element.queryGraph();
+        assert.deepEqual(element[openedEndpointsValue], []);
+      });
+    });
   });
 });

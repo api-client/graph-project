@@ -5,7 +5,7 @@ export class NavigationContextMenu extends ContextMenu {
    * Finds the click target which can be one of the model objects
    * or SVG elements.
    *
-   * @param {PointerEvent} e
+   * @param {MouseEvent} e
    * @return {HTMLElement|SVGElement|undefined}
    */
   findTarget(e) {

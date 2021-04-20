@@ -1,9 +1,14 @@
 import { fixture, assert, html } from '@open-wc/testing';
 import { AmfStoreService, StoreEventTypes, StoreEvents } from '@api-client/amf-store';
 import { nextFrame, oneEvent } from '@open-wc/testing-helpers';
+import { ns } from '@api-components/amf-helper-mixin/src/Namespace.js';
 import '../../graph-api-navigation.js';
 import { 
   addingEndpointValue,
+  addingDocumentationValue,
+  addingExternalValue,
+  addingSchemaValue,
+  addingSchemaTypeValue,
 } from '../../src/GraphApiNavigationElement.js';
 
 /** @typedef {import('@anypoint-web-components/anypoint-collapse').AnypointCollapseElement} AnypointCollapseElement */
@@ -67,7 +72,6 @@ describe('GraphApiNavigationElement', () => {
           await element.addEndpoint();
           assert.isTrue(element[addingEndpointValue]);
         });
-
 
         it('renders the input element inside the endpoints', async () => {
           await element.addEndpoint();
@@ -325,6 +329,570 @@ describe('GraphApiNavigationElement', () => {
           await nextFrame();
           const node = element.shadowRoot.querySelector('.list-item.operation');
           assert.notOk(node);
+        });
+      });
+    });
+
+    describe('Documentations editing', () => {
+      describe('Data rendering', () => {
+        let element = /** @type GraphApiNavigationElement */ (null);
+        before(async () => { element = await dataFixture() });
+
+        it('renders the section title without documents', () => {
+          const title = element.shadowRoot.querySelector('.documentation .section-title');
+          assert.ok(title);
+        });
+
+        it('renders the empty info', () => {
+          const p = element.shadowRoot.querySelector('.documentation .empty-section');
+          assert.ok(p, 'has the info');
+          assert.equal(p.textContent.trim(), 'No documentations in this API');
+        });
+      });
+
+      describe('Adding a documentation', () => {
+        let element = /** @type GraphApiNavigationElement */ (null);
+        beforeEach(async () => { 
+          await store.createWebApi({});
+          element = await dataFixture() 
+        });
+
+        it('opens the documentations when no opened', async () => {
+          await element.addDocumentation();
+          assert.isTrue(element.documentationsOpened);
+        });
+
+        it('sets the [addingDocumentationValue]', async () => {
+          await element.addDocumentation();
+          assert.isTrue(element[addingDocumentationValue]);
+        });
+
+        it('sets the default [addingExternalValue]', async () => {
+          await element.addDocumentation();
+          assert.isFalse(element[addingExternalValue]);
+        });
+
+        it('sets the set [addingExternalValue]', async () => {
+          await element.addDocumentation(true);
+          assert.isTrue(element[addingExternalValue]);
+        });
+
+        it('renders the simple input element inside the documentation', async () => {
+          await element.addDocumentation();
+          const input = element.shadowRoot.querySelector('.add-documentation-input input');
+          assert.ok(input);
+        });
+
+        it('focuses on the name input for inline docs', async () => {
+          await element.addDocumentation();
+          const input = element.shadowRoot.querySelector('.add-documentation-input input');
+          assert.isTrue(element.shadowRoot.activeElement === input, 'has focus in the shadow DOM');
+        });
+
+        it('renders the URL input element for external documentation', async () => {
+          await element.addDocumentation(true);
+          const input = element.shadowRoot.querySelector('.add-external-doc-input input');
+          assert.ok(input);
+        });
+
+        it('focuses on the URL input for external docs', async () => {
+          await element.addDocumentation(true);
+          const input = element.shadowRoot.querySelector('.add-external-doc-input input');
+          assert.isTrue(element.shadowRoot.activeElement === input, 'has focus in the shadow DOM');
+        });
+
+        it('removes the input when Escape (inline docs)', async () => {
+          await element.addDocumentation();
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-documentation-input input'));
+          input.value = 'test';
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Escape',
+            code: 'Escape',
+          }));
+          await nextFrame();
+          const node = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-documentation-input input'));
+          assert.notOk(node, 'input is not in the DOM')
+        });
+
+        it('removes the input when Escape (external docs)', async () => {
+          await element.addDocumentation(true);
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-documentation-input input'));
+          input.value = 'test';
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Escape',
+            code: 'Escape',
+          }));
+          await nextFrame();
+          const node = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-documentation-input input'));
+          assert.notOk(node, 'input is not in the DOM')
+        });
+
+        it('adds new inline documentation on enter', async () => {
+          await element.addDocumentation();
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-documentation-input input'));
+          input.value = 'A documentation';
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Enter',
+            code: 'Enter',
+          }));
+          const e = await oneEvent(window, StoreEventTypes.Documentation.State.created);
+          assert.equal(e.detail.item.title, 'A documentation', 'created the documentation');
+        });
+
+        it('renders added inline documentation on enter', async () => {
+          await element.addDocumentation();
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-documentation-input input'));
+          input.value = 'A documentation';
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Enter',
+            code: 'Enter',
+          }));
+          await oneEvent(window, StoreEventTypes.Documentation.State.created);
+          await nextFrame();
+          const node = element.shadowRoot.querySelector('.list-item.documentation');
+          assert.ok(node, 'has the item');
+          assert.equal(node.textContent.trim(), 'A documentation', 'renders the name');
+        });
+
+        it('adds new external documentation on enter', async () => {
+          await element.addDocumentation(true);
+          const url = 'https://api.com';
+          const title = 'External doc';
+          /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-external-doc-input input')).value = url;
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-documentation-input input'));
+          input.value = title;
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Enter',
+            code: 'Enter',
+          }));
+          const e = await oneEvent(window, StoreEventTypes.Documentation.State.created);
+          assert.equal(e.detail.item.title, title, 'has the title');
+          assert.equal(e.detail.item.url, url, 'has the url');
+        });
+        
+        it('renders new external documentation on enter', async () => {
+          await element.addDocumentation(true);
+          const url = 'https://api.com';
+          const title = 'External doc';
+          /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-external-doc-input input')).value = url;
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-documentation-input input'));
+          input.value = title;
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Enter',
+            code: 'Enter',
+          }));
+          await oneEvent(window, StoreEventTypes.Documentation.State.created);
+          await nextFrame();
+          const node = element.shadowRoot.querySelector('.list-item.documentation');
+          assert.equal(node.textContent.trim(), title, 'renders the name');
+        });
+      });
+
+      describe('Editing documentation name', () => {
+        let element = /** @type GraphApiNavigationElement */ (null);
+        const title1 = 'Doc 1';
+        const desc1 = 'A description';
+        const title2 = 'Doc 2';
+        const url2 = 'https://domain.com';
+        let id1;
+        let id2;
+
+        beforeEach(async () => {
+          await store.createWebApi({});
+          id1 = (await store.addDocumentation({ title: title1, description: desc1 })).id;
+          id2 = (await store.addDocumentation({ title: '', description: title2, url: url2 })).id;
+          element = await dataFixture();
+        });
+
+        it('renders the input instead of a inline doc list item', async () => {
+          await element.renameAction(id1);
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id1}"]`));
+          assert.ok(input, 'has the input');
+        });
+
+        it('renders the input instead of a external doc list item', async () => {
+          await element.renameAction(id2);
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id2}"]`));
+          assert.ok(input, 'has the input');
+        });
+
+        it('cancels on Escape', async () => {
+          await element.renameAction(id1);
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id1}"]`));
+          input.value = 'test';
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Escape',
+            code: 'Escape',
+          }));
+          await nextFrame();
+          const node = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id1}"]`));
+          assert.notOk(node, 'input is not in the DOM')
+        });
+
+        it('updates the inline doc title on enter', async () => {
+          await element.renameAction(id1);
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id1}"]`));
+          input.value = 'updated';
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Enter',
+            code: 'Enter',
+          }));
+          const e = await oneEvent(window, StoreEventTypes.Documentation.State.updated);
+          assert.equal(e.detail.item.title, 'updated', 'updates the title');
+        });
+
+        it('renders the new name after input closes', async () => {
+          await element.renameAction(id1);
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id1}"]`));
+          input.value = 'updated';
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Enter',
+            code: 'Enter',
+          }));
+          await oneEvent(window, StoreEventTypes.Documentation.State.updated);
+          await nextFrame();
+          const node = element.shadowRoot.querySelector(`.list-item[data-graph-id="${id1}"]`);
+          assert.ok(node, 'has the item');
+          assert.equal(node.textContent.trim(), 'updated', 'renders the title');
+        });
+
+        it('renders the new description after external input closes', async () => {
+          await element.renameAction(id2);
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id2}"]`));
+          input.value = 'updated';
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Enter',
+            code: 'Enter',
+          }));
+          const e = await oneEvent(window, StoreEventTypes.Documentation.State.updated);
+          assert.equal(e.detail.item.description, 'updated', 'updates the description');
+          await nextFrame();
+          const node = element.shadowRoot.querySelector(`.list-item[data-graph-id="${id2}"]`);
+          assert.ok(node, 'has the item');
+          assert.equal(node.textContent.trim(), 'updated', 'renders the title');
+        });
+      });
+
+      describe('Deleting a documentation', () => {
+        let element = /** @type GraphApiNavigationElement */ (null);
+        const title1 = 'Doc 1';
+        const desc1 = 'A description';
+        const title2 = 'Doc 2';
+        const url2 = 'https://domain.com';
+        let id1;
+        let id2;
+
+        beforeEach(async () => {
+          await store.createWebApi({});
+          id1 = (await store.addDocumentation({ title: title1, description: desc1 })).id;
+          id2 = (await store.addDocumentation({ title: '', description: title2, url: url2 })).id;
+          element = await dataFixture();
+        });
+
+        it('removes the inline doc list item', async () => {
+          await StoreEvents.Documentation.delete(window, id1);
+          await nextFrame();
+          const node = element.shadowRoot.querySelector(`.list-item[data-graph-id="${id1}"]`);
+          assert.notOk(node);
+        });
+
+        it('removes the external doc list item', async () => {
+          await StoreEvents.Documentation.delete(window, id2);
+          await nextFrame();
+          const node = element.shadowRoot.querySelector(`.list-item[data-graph-id="${id2}"]`);
+          assert.notOk(node);
+        });
+      });
+    });
+
+    describe('Schema editing', () => {
+      describe('Data rendering', () => {
+        let element = /** @type GraphApiNavigationElement */ (null);
+        before(async () => { element = await dataFixture() });
+
+        it('renders the section title without documents', () => {
+          const title = element.shadowRoot.querySelector('.schemas .section-title');
+          assert.ok(title);
+        });
+
+        it('renders the empty info', () => {
+          const p = element.shadowRoot.querySelector('.schemas .empty-section');
+          assert.ok(p, 'has the info');
+          assert.equal(p.textContent.trim(), 'No schemas in this API');
+        });
+      });
+
+      describe('Adding a schema', () => {
+        let element = /** @type GraphApiNavigationElement */ (null);
+        beforeEach(async () => { 
+          await store.createWebApi({});
+          element = await dataFixture() 
+        });
+
+        it('opens the schemas when no opened', async () => {
+          await element.addSchema();
+          assert.isTrue(element.schemasOpened);
+        });
+
+        it('sets the [addingSchemaValue]', async () => {
+          await element.addSchema();
+          assert.isTrue(element[addingSchemaValue]);
+        });
+
+        it('sets the default [addingSchemaTypeValue]', async () => {
+          await element.addSchema();
+          assert.equal(element[addingSchemaTypeValue], 'object');
+        });
+
+        it('sets the passed [addingSchemaTypeValue]', async () => {
+          await element.addSchema('scalar');
+          assert.equal(element[addingSchemaTypeValue], 'scalar');
+        });
+
+        it('renders the input element inside the schemas', async () => {
+          await element.addSchema();
+          const input = element.shadowRoot.querySelector('.add-schema-input input');
+          assert.ok(input);
+        });
+
+        it('focuses on the name input for inline docs', async () => {
+          await element.addSchema();
+          const input = element.shadowRoot.querySelector('.add-schema-input input');
+          assert.isTrue(element.shadowRoot.activeElement === input, 'has focus in the shadow DOM');
+        });
+
+        it('removes the input when Escape (inline docs)', async () => {
+          await element.addSchema();
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-schema-input input'));
+          input.value = 'test';
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Escape',
+            code: 'Escape',
+          }));
+          await nextFrame();
+          const node = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-schema-input input'));
+          assert.notOk(node, 'input is not in the DOM')
+        });
+
+        function dispatchEnter(input) {
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Enter',
+            code: 'Enter',
+          }));
+        }
+
+        it('adds new (default) schema on enter', async () => {
+          await element.addSchema();
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-schema-input input'));
+          input.value = 'A schema';
+          dispatchEnter(input);
+          const e = await oneEvent(window, StoreEventTypes.Type.State.created);
+          assert.equal(e.detail.item.name, 'A schema', 'created the documentation');
+          assert.equal(e.detail.item.types[0], ns.w3.shacl.NodeShape, 'has the object type');
+        });
+
+        it('adds new (object) schema on enter', async () => {
+          await element.addSchema('object');
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-schema-input input'));
+          input.value = 'A schema';
+          dispatchEnter(input);
+          const e = await oneEvent(window, StoreEventTypes.Type.State.created);
+          assert.equal(e.detail.item.types[0], ns.w3.shacl.NodeShape, 'has the object type');
+        });
+
+        it('adds new (scalar) schema on enter', async () => {
+          await element.addSchema('scalar');
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-schema-input input'));
+          input.value = 'A schema';
+          dispatchEnter(input);
+          const e = await oneEvent(window, StoreEventTypes.Type.State.created);
+          assert.equal(e.detail.item.types[0], ns.aml.vocabularies.shapes.ScalarShape, 'has the scalar type');
+        });
+
+        it('adds new (array) schema on enter', async () => {
+          await element.addSchema('array');
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-schema-input input'));
+          input.value = 'A schema';
+          dispatchEnter(input);
+          const e = await oneEvent(window, StoreEventTypes.Type.State.created);
+          assert.equal(e.detail.item.types[0], ns.aml.vocabularies.shapes.ArrayShape, 'has the scalar type');
+        });
+
+        it('adds new (file) schema on enter', async () => {
+          await element.addSchema('file');
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-schema-input input'));
+          input.value = 'A schema';
+          dispatchEnter(input);
+          const e = await oneEvent(window, StoreEventTypes.Type.State.created);
+          assert.equal(e.detail.item.types[0], ns.aml.vocabularies.shapes.FileShape, 'has the scalar type');
+        });
+
+        it('adds new (union) schema on enter', async () => {
+          await element.addSchema('union');
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-schema-input input'));
+          input.value = 'A schema';
+          dispatchEnter(input);
+          const e = await oneEvent(window, StoreEventTypes.Type.State.created);
+          assert.equal(e.detail.item.types[0], ns.aml.vocabularies.shapes.UnionShape, 'has the scalar type');
+        });
+
+        it('renders added schema on enter', async () => {
+          await element.addSchema();
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-schema-input input'));
+          input.value = 'A schema';
+          dispatchEnter(input);
+          await oneEvent(window, StoreEventTypes.Type.State.created);
+          await nextFrame();
+          const node = element.shadowRoot.querySelector('.list-item.schema');
+          assert.ok(node, 'has the item');
+          assert.equal(node.textContent.trim(), 'A schema', 'renders the name');
+        });
+      });
+
+      describe('Editing schema name', () => {
+        let element = /** @type GraphApiNavigationElement */ (null);
+        const name = 'A schema';
+        let id;
+
+        beforeEach(async () => {
+          await store.createWebApi({});
+          id = (await store.addType({ name, type: ns.aml.vocabularies.shapes.ScalarShape })).id;
+          element = await dataFixture();
+        });
+
+        it('renders the input instead of the list item', async () => {
+          await element.renameAction(id);
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id}"]`));
+          assert.ok(input, 'has the input');
+        });
+
+        it('cancels on Escape', async () => {
+          await element.renameAction(id);
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id}"]`));
+          input.value = 'test';
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Escape',
+            code: 'Escape',
+          }));
+          await nextFrame();
+          const node = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id}"]`));
+          assert.notOk(node, 'input is not in the DOM')
+        });
+
+        it('updates the name on enter', async () => {
+          await element.renameAction(id);
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id}"]`));
+          input.value = 'updated';
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Enter',
+            code: 'Enter',
+          }));
+          const e = await oneEvent(window, StoreEventTypes.Type.State.updated);
+          assert.equal(e.detail.item.name, 'updated', 'updates the name');
+        });
+
+        it('updates the name on input blur', async () => {
+          await element.renameAction(id);
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id}"]`));
+          input.value = 'updated';
+          input.dispatchEvent(new Event('blur'));
+          const e = await oneEvent(window, StoreEventTypes.Type.State.updated);
+          assert.equal(e.detail.item.name, 'updated', 'updates the name');
+        });
+
+        it('renders the new name after input closes', async () => {
+          await element.renameAction(id);
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id}"]`));
+          input.value = 'updated';
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Enter',
+            code: 'Enter',
+          }));
+          await oneEvent(window, StoreEventTypes.Type.State.updated);
+          await nextFrame();
+          const node = element.shadowRoot.querySelector(`.list-item[data-graph-id="${id}"]`);
+          assert.ok(node, 'has the item');
+          assert.equal(node.textContent.trim(), 'updated', 'renders the name');
+        });
+
+        it('updates the display name when present', async () => {
+          await store.updateTypeProperty(id, 'displayName', 'a dn');
+          await element.renameAction(id);
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id}"]`));
+          input.value = 'updated';
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Enter',
+            code: 'Enter',
+          }));
+          const e = await oneEvent(window, StoreEventTypes.Type.State.updated);
+          assert.equal(e.detail.item.displayName, 'updated', 'updates the displayName');
+        });
+      });
+
+      describe('Deleting a schema', () => {
+        let element = /** @type GraphApiNavigationElement */ (null);
+        const name = 'A schema';
+        let id;
+
+        beforeEach(async () => {
+          await store.createWebApi({});
+          id = (await store.addType({ name, type: ns.aml.vocabularies.shapes.ScalarShape })).id;
+          element = await dataFixture();
+        });
+
+        it('removes list item from the view', async () => {
+          await StoreEvents.Type.delete(window, id);
+          await nextFrame();
+          const node = /** @type HTMLElement */ (element.shadowRoot.querySelector(`.schemas .list-item`));
+          assert.notOk(node, 'item is removed');
         });
       });
     });
