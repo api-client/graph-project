@@ -79,6 +79,7 @@ class ComponentPage extends DemoPage {
     switch (button.id) {
       case 'init': this.initStore(); break;
       case 'loadApiGraph': this.loadDemoApi(button.dataset.src); break;
+      case 'createWebApi': this.createWebApi(); break;
       default: console.warn(`Unhandled action ${button.id}`);
     }
   }
@@ -90,6 +91,13 @@ class ComponentPage extends DemoPage {
     await this.store.loadGraph(model);
     const api = await this.store.getApi();
     this.apiId = api.id;
+    this.loaded = true;
+  }
+
+  async createWebApi() {
+    this.loaded = false;
+    const api = await this.store.createWebApi();
+    this.apiId = api;
     this.loaded = true;
   }
 
@@ -218,6 +226,8 @@ class ComponentPage extends DemoPage {
         <button id="loadApiGraph" data-src="async-api-compact.json" ?disabled="${!initialized}">Load async API</button>
         <button id="loadApiGraph" data-src="google-drive-api.json" ?disabled="${!initialized}">Load Google Drive API</button>
         <button id="loadApiGraph" data-src="streetlights-compact.json" ?disabled="${!initialized}">Streetlights (async) API</button>
+        <button id="loadApiGraph" data-src="oas-3-api.json" ?disabled="${!initialized}">OAS 3</button>
+        <button id="createWebApi" ?disabled="${!initialized}">Create empty Web API</button>
       </div>
     </section>
     `;

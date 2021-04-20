@@ -33,6 +33,10 @@ servers:
       basePath:
         default: v2
 
+externalDocs:
+  description: ABout this API.
+  url: https://domain.com
+
 components:
   schemas:
     GeneralError:
@@ -71,6 +75,9 @@ components:
           description: The title of the article, in CommonMark format.
           type: string
           minLength: 3
+      externalDocs:
+        description: Find more about this type
+        url: https://api.com
   parameters:
     skipParam:
       name: skip

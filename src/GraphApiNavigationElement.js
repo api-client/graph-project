@@ -1,3 +1,4 @@
+/* eslint-disable lit-a11y/click-events-have-key-events */
 /* eslint-disable no-continue */
 /* eslint-disable no-plusplus */
 /* eslint-disable prefer-destructuring */
@@ -65,7 +66,6 @@ export const computeEndpointPaddingLeft = Symbol('computeEndpointPaddingLeft');
 export const computeOperationPaddingValue = Symbol('computeOperationPaddingValue');
 export const computeOperationPaddingLeft = Symbol('computeOperationPaddingLeft');
 export const itemClickHandler = Symbol('itemClickHandler');
-export const itemKeydownHandler = Symbol('itemKeydownHandler');
 export const toggleSectionClickHandler = Symbol('toggleSectionClickHandler');
 export const toggleSectionKeydownHandler = Symbol('toggleSectionKeydownHandler');
 export const endpointToggleClickHandler = Symbol('endpointToggleClickHandler');
@@ -628,7 +628,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     return items.map((endpoint) => ({
       ...endpoint,
       indent: 0,
-      label: endpoint.path,
+      label: endpoint.name || endpoint.path,
       selected: false,
       secondarySelected: false,
     }));
@@ -846,7 +846,8 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     if (!q) {
       return items;
     }
-    return items.filter((doc) => (doc.title || '').includes(q));
+    return items.filter((doc) => 
+      (doc.title || '').toLocaleLowerCase().includes(q));
   }
 
   /**
@@ -861,7 +862,9 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     if (!q) {
       return items;
     }
-    return items.filter((doc) => (doc.name || '').includes(q) || (doc.displayName || '').includes(q));
+    return items.filter((doc) => 
+      (doc.name || '').toLocaleLowerCase().includes(q) || 
+      (doc.displayName || '').toLocaleLowerCase().includes(q));
   }
 
   /**
@@ -876,7 +879,10 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     if (!q) {
       return items;
     }
-    return items.filter((doc) => (doc.name || '').includes(q) || (doc.displayName || '').includes(q) || (doc.type || '').includes(q));
+    return items.filter((doc) => 
+      (doc.name || '').toLocaleLowerCase().includes(q) || 
+      (doc.displayName || '').toLocaleLowerCase().includes(q) || 
+      (doc.type || '').toLocaleLowerCase().includes(q));
   }
 
   /**
@@ -1141,7 +1147,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       nodes.forEach((item) => {
         result[result.length] = /** @type HTMLElement */ (item);
         const collapse = item.nextElementSibling;
-        if (collapse.localName !== 'anypoint-collapse') {
+        if (!collapse || collapse.localName !== 'anypoint-collapse') {
           return;
         }
         const children = /** @type HTMLElement[] */ (Array.from(collapse.querySelectorAll('.list-item.operation')));
@@ -1469,7 +1475,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   [addDocumentationKeydownHandler](e) {
     if (e.key === 'Enter' || e.key === 'NumpadEnter') {
       e.preventDefault();
-      const input = /** @HTMLInputElement */ (e.target);
+      const input = /** @type HTMLInputElement */ (e.target);
       this[commitNewDocumentation](input.value);
     } else if (e.key === 'Escape') {
       e.preventDefault();
@@ -1486,7 +1492,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   [addSchemaKeydownHandler](e) {
     if (e.key === 'Enter' || e.key === 'NumpadEnter') {
       e.preventDefault();
-      const input = /** @HTMLInputElement */ (e.target);
+      const input = /** @type HTMLInputElement */ (e.target);
       this[commitNewSchema](input.value);
     } else if (e.key === 'Escape') {
       e.preventDefault();
@@ -1606,9 +1612,6 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    * @param {ApiStoreStateCreateEvent} e
    */
   async [operationCreatedHandler](e) {
-    if (e.defaultPrevented) {
-      return;
-    }
     const { domainParent } = e.detail;
     const operation = /** @type ApiOperation */ (e.detail.item);
     const item = /** @type OperationItem */ ({
@@ -1681,7 +1684,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    */
   async [documentationUpdatedHandler](e) {
     const { property, graphId } = e.detail;
-    if (!['url', 'title'].includes(property)) {
+    if (!['url', 'title', 'description'].includes(property)) {
       return;
     }
     const model = /** @type DocumentationItem */ (this[findViewModelItem](graphId));
@@ -1691,6 +1694,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     const documentation = /** @type ApiDocumentation */ (e.detail.item);
     model.url = documentation.url;
     model.title = documentation.title;
+    model.description = documentation.description;
     this.requestUpdate();
   }
 
@@ -1875,7 +1879,9 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     } else if (type === 'operation') {
       promise = StoreEvents.Operation.update(this, id, 'name', updateValue);
     } else if (type === 'documentation') {
-      promise = StoreEvents.Documentation.update(this, id, 'title', updateValue);
+      const obj = await StoreEvents.Documentation.get(this, id);
+      const prop = obj.title ? 'title' : 'description';
+      promise = StoreEvents.Documentation.update(this, id, prop, updateValue);
     } else if (type === 'schema') {
       const obj = await StoreEvents.Type.get(this, id);
       const { displayName } = obj;
@@ -1940,7 +1946,6 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
         data-graph-id="summary"
         data-graph-shape="summary"
         @click="${this[itemClickHandler]}"
-        @keydown="${this[itemKeydownHandler]}"
       >
         ${summaryLabel}
       </div>
@@ -2036,7 +2041,6 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       data-graph-id="${id}"
       data-graph-shape="endpoint"
       @click="${this[itemClickHandler]}"
-      @keydown="${this[itemKeydownHandler]}"
       title="Open this endpoint"
       style="${styleMap(itemStyles)}"
       role="menuitem"
@@ -2109,7 +2113,6 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       data-graph-shape="operation"
       data-operation="${method}"
       @click="${this[itemClickHandler]}"
-      @keydown="${this[itemKeydownHandler]}"
       style="${styleMap(itemStyles)}"
     >
       ${nameEditor ? 
@@ -2188,6 +2191,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     const { title, id, selected, secondarySelected, nameEditor } = item;
     const classes = {
       'list-item': true,
+      documentation: true,
       selected, 
       secondarySelected,
     }
@@ -2199,7 +2203,6 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       data-graph-id="${id}"
       data-graph-shape="documentation"
       @click="${this[itemClickHandler]}"
-      @keydown="${this[itemKeydownHandler]}"
     >
       ${nameEditor ? this[renameInputTemplate](id, title, 'documentation') : title}
     </div>`;
@@ -2210,9 +2213,11 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    * @return {TemplateResult} The template for the external documentation list item.
    */
   [externalDocumentationTemplate](item) {
-    const { title, url, id, selected, secondarySelected, nameEditor } = item;
+    const { title, description, url, id, selected, secondarySelected, nameEditor } = item;
+    const label = title || description;
     const classes = {
       'list-item': true,
+      documentation: true,
       selected, 
       secondarySelected,
     }
@@ -2227,9 +2232,9 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       @click="${this[externalDocumentationHandler]}"
     >
       ${nameEditor ? 
-        this[renameInputTemplate](id, title, 'documentation') 
+        this[renameInputTemplate](id, label, 'documentation') 
         : html`
-        ${title}
+        ${label}
         <arc-icon class="icon new-tab" title="Opens in a new tab" icon="openInNew"></arc-icon>
         `
       }
@@ -2299,6 +2304,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     const label = displayName || name || 'Unnamed schema';
     const classes = {
       'list-item': true,
+      schema: true,
       selected, 
       secondarySelected,
     }
@@ -2311,7 +2317,6 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       data-graph-id="${id}"
       data-graph-shape="schema"
       @click="${this[itemClickHandler]}"
-      @keydown="${this[itemKeydownHandler]}"
     >
       ${nameEditor ? this[renameInputTemplate](id, label, 'schema') : label}
    </div>`;
@@ -2374,6 +2379,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     const label = displayName || name || 'Unnamed security';
     const classes = {
       'list-item': true,
+      security: true,
       selected, 
       secondarySelected,
     }
@@ -2386,7 +2392,6 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       data-graph-id="${id}"
       data-graph-shape="security"
       @click="${this[itemClickHandler]}"
-      @keydown="${this[itemKeydownHandler]}"
     >
       ${type}: ${label}
    </div>`;
@@ -2425,7 +2430,13 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       class="input-item add-endpoint-input"
       data-graph-shape="endpoint"
     >
-      <input type="text" class="add-endpoint-input" @keydown="${this[addEndpointKeydownHandler]}"/>
+      <input 
+        type="text" 
+        class="add-endpoint-input" 
+        @keydown="${this[addEndpointKeydownHandler]}"
+        placeholder="Endpoint's path"
+        aria-label="Enter the path for the endpoint"
+      >
       <arc-icon icon="add" title="Enter to save, ESC to cancel"></arc-icon>
     </div>
     `;
