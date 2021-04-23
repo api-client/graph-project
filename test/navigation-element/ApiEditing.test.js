@@ -245,7 +245,7 @@ describe('GraphApiNavigationElement', () => {
         });
 
         it('renders the operation with method only', async () => {
-          const op = await StoreEvents.Operation.add(window, created.id, { method: 'get' });
+          const op = await StoreEvents.Endpoint.addOperation(window, created.id, { method: 'get' });
           await nextFrame();
           const node = element.shadowRoot.querySelector('.list-item.operation');
           assert.equal(node.textContent.trim(), 'get', 'has the label');
@@ -253,7 +253,7 @@ describe('GraphApiNavigationElement', () => {
         });
 
         it('renders the operation with method and name', async () => {
-          await StoreEvents.Operation.add(window, created.id, { method: 'get', name: 'Test' });
+          await StoreEvents.Endpoint.addOperation(window, created.id, { method: 'get', name: 'Test' });
           await nextFrame();
           const node = element.shadowRoot.querySelector('.list-item.operation');
           assert.include(node.textContent.trim(), 'Test', 'has the label');
@@ -269,7 +269,7 @@ describe('GraphApiNavigationElement', () => {
         beforeEach(async () => {
           await store.createWebApi({});
           const endpoint = await StoreEvents.Endpoint.add(window, { path, name, });
-          created = await StoreEvents.Operation.add(window, endpoint.id, { method: 'get' });
+          created = await StoreEvents.Endpoint.addOperation(window, endpoint.id, { method: 'get' });
           element = await dataFixture();
         });
 
@@ -316,16 +316,18 @@ describe('GraphApiNavigationElement', () => {
         const path = '/endpoint-path';
         const name = '/initial-name';
         let created;
+        let eId;
 
         beforeEach(async () => {
           await store.createWebApi({});
           const endpoint = await StoreEvents.Endpoint.add(window, { path, name, });
-          created = await StoreEvents.Operation.add(window, endpoint.id, { method: 'get' });
+          eId = endpoint.id;
+          created = await StoreEvents.Endpoint.addOperation(window, eId, { method: 'get' });
           element = await dataFixture();
         });
 
         it('removed the operation when deleted', async () => {
-          await StoreEvents.Operation.delete(window, created.id);
+          await StoreEvents.Endpoint.removeOperation(window, created.id, eId);
           await nextFrame();
           const node = element.shadowRoot.querySelector('.list-item.operation');
           assert.notOk(node);
