@@ -111,7 +111,7 @@ const commands = /** @type ContextMenuCommand[] */ ([
         return;
       }
       try {
-        await StoreEvents.Operation.add(ctx.root, graphId, { method });
+        await StoreEvents.Endpoint.addOperation(ctx.root, graphId, { method });
       } catch (e) {
         ReportingEvents.error(this, e, `Unable to create an operation: ${e.message}`, 'Navigation commands');
       }
@@ -174,12 +174,12 @@ const commands = /** @type ContextMenuCommand[] */ ([
     label: 'Delete',
     icon: deleteOutline,
     execute: async (ctx) => {
-      const { graphId } = ctx.target.dataset;
-      if (!graphId) {
+      const { graphId, graphParent } = ctx.target.dataset;
+      if (!graphId || !graphParent) {
         return;
       }
       try {
-        await StoreEvents.Operation.delete(ctx.root, graphId);
+        await StoreEvents.Endpoint.removeOperation(ctx.root, graphId, graphParent);
       } catch (e) {
         ReportingEvents.error(this, e, `Unable to delete an operation: ${e.message}`, 'Navigation commands');
       }
