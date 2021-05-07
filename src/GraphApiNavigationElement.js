@@ -1441,7 +1441,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     if (type === 'operation' && id) {
       const node = /** @type HTMLElement */ (this.shadowRoot.querySelector(`.operation[data-graph-id="${id}"]`));
       if (node) {
-        parent = node.dataset.parentId;
+        parent = node.dataset.graphParent;
       }
     }
     NavigationEvents.navigate(this, id, type, {
@@ -1646,22 +1646,30 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   /**
    * @param {ApiStoreStateDeleteEvent} e
    */
-  async [operationDeletedHandler](e) {
+  async [operationDeletedHandler]() {
     const endpoints = this[endpointsValue];
     if (!endpoints || !endpoints.length) {
       return;
     }
-    const { graphId } = e.detail;
-    for (let i = 0, len = endpoints.length; i < len; i++) {
-      const endpoint = endpoints[i];
-      const index = endpoint.operations.findIndex((item) => item.id === graphId);
-      if (index === -1) {
-        continue;
-      }
-      endpoint.operations.splice(index, 1);
-      this.requestUpdate();
-      return;
-    }
+    // the graph apparently updates the ids for operations when an operation is deleted.
+    // Until this is fixed, the entire endpoint has to be updated.
+    const ctrl = new AbortController();
+    this[abortControllerValue] = ctrl;
+    await this[queryEndpoints](ctrl.signal);
+    this[abortControllerValue] = undefined;
+    this.requestUpdate();
+
+    // const { graphId } = e.detail;
+    // for (let i = 0, len = endpoints.length; i < len; i++) {
+    //   const endpoint = endpoints[i];
+    //   const index = endpoint.operations.findIndex((item) => item.id === graphId);
+    //   if (index === -1) {
+    //     continue;
+    //   }
+    //   endpoint.operations.splice(index, 1);
+    //   this.requestUpdate();
+    //   return;
+    // }
   }
 
   /**
