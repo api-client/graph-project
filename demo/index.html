@@ -1,102 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
 
+<!doctype html>
+<html lang="en-GB">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
-  <title>Graph API navigation</title>
-  <style>
-    body.demo.styled {
-      color: #000;
-      --error-color: red;
-      --primary-text-color: #000;
-      --primary-color: #00a2df;
-      --primary-background-color: #ffffff;
-      --dark-divider-opacity: 0.12;
-      --anypoint-button-emphasis-high-background-color: var(--accent-color);
-      --anypoint-dropdown-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.4);
-
-      --api-navigation-section-toggle-icon-color: #ff7979;
-
-      /* HTTP method colors */
-      --http-get-color: #008000;
-      --http-post-color: #2196F3;
-      --http-put-color: #FFA500;
-      --http-patch-color: #9C27B0;
-      --http-delete-color: #F44336;
-      --http-options-color: rgba(128, 128, 128, 0.74);
-      --http-head-color: rgba(128, 128, 128, 0.74);
-      --http-connect-color: rgba(128, 128, 128, 0.74);
-      --http-trace-color: rgba(128, 128, 128, 0.74);
-      --http-method-label-get-background-color: var(--http-get-color);
-      --http-method-label-get-color: #fff;
-      --http-method-label-post-background-color: var(--http-post-color);
-      --http-method-label-post-color: #fff;
-      --http-method-label-put-background-color: var(--http-put-color);
-      --http-method-label-put-color: #000;
-      --http-method-label-delete-background-color: var(--http-delete-color);
-      --http-method-label-delete-color: #fff;
-      --http-method-label-options-background-color: var(--http-options-color);
-      --http-method-label-options-background-color: var(--primary-text-color);
-      --http-method-label-head-background-color: var(--http-head-color);
-      --http-method-label-head-color: var(--primary-text-color);
-      --http-method-label-patch-background-color: var(--http-patch-color);
-      --http-method-label-patch-color: #fff;
-    }
-
-    body.demo.styled.dark {
-      --primary-color: #ffcc80;
-      --primary-text-color: #fff;
-      --accent-color: #E040FB;
-      --secondary-text-color: rgba(255, 255, 255, 0.84);
-      --primary-background-color: #212121;
-      --secondary-background-color: #313131;
-      --error-color: #ff9090;
-      --link-color: #8bc34a;
-      --input-background-color: var(--primary-background-color);
-      --active-background-color: #616161;
-
-      --anypoint-input-background-color: var(--input-background-color);
-      --anypoint-input-label-color: var(--primary-text-color);
-      --anypoint-input-input-color: var(--primary-text-color);
-      --anypoint-input-border-bottom-color: var(--primary-text-color);
-      --anypoint-input-focused-border-bottom-color: var(--primary-text-color);
-      --anypoint-input-label-background-color: rgb(66, 66, 66);
-      --anypoint-input-legacy-focus-background-color: #3a3b3c;
-      --anypoint-input-legacy-focus-border-color: #178bea;
-      --anypoint-input-info-message-color: var(--primary-text-color);
-
-      /* HTTP method colors */
-      --http-get-color: #c6f68d;
-      --http-post-color: #b39afd;
-      --http-put-color: #ffc77d;
-      --http-patch-color: #f186c0;
-      --http-delete-color: #FF5252;
-      --http-options-color: rgba(128, 128, 128, 0.74);
-      --http-head-color: rgba(128, 128, 128, 0.74);
-      --http-connect-color: rgba(128, 128, 128, 0.74);
-      --http-trace-color: rgba(128, 128, 128, 0.74);
-      --http-method-label-get-background-color: var(--http-get-color);
-      --http-method-label-get-color: #000;
-      --http-method-label-post-background-color: var(--http-post-color);
-      --http-method-label-post-color: #000;
-      --http-method-label-put-background-color: var(--http-put-color);
-      --http-method-label-put-color: #000;
-      --http-method-label-delete-background-color: var(--http-delete-color);
-      --http-method-label-delete-color: #000;
-      --http-method-label-options-background-color: var(--http-options-color);
-      --http-method-label-options-background-color: var(--primary-text-color);
-      --http-method-label-head-background-color: var(--http-head-color);
-      --http-method-label-head-color: var(--primary-text-color);
-      --http-method-label-patch-background-color: var(--http-patch-color);
-      --http-method-label-patch-color: #000;
-    }
-  </style>
+  <title>AMF graph project</title>
 </head>
-
-<body class="demo styled">
-  <div id="demo"></div>
-  <script type="module" src="index.js"></script>
+<body>
+  <main>
+    <h1>AMF graph project</h1>
+    <nav>
+      <dl>
+        <dt><a href="navigation.html">Navigation</a></dt>
+        <dd>An element to render API navigation from the AMF store.</dd>
+        <dt><a href="api-import.html">API import</a></dt>
+        <dd>An element that renders controls to import an API.</dd>
+      </dl>
+    </nav>
+  </main>
+  <script type="module" async src="../node_modules/@advanced-rest-client/arc-demo-helper/src/SharedStyles.js"></script>
 </body>
-
 </html>

@@ -1,0 +1,132 @@
+output {
+  white-space: pre-wrap;
+}
+
+body.demo.styled {
+  color: #000;
+  --accent-color: #0540F2;
+  --error-color: #D32F2F;
+  --primary-text-color: #000;
+  --primary-color: #1976D2;
+  --primary-background-color: #ffffff;
+  --selection-color: #1976D2;
+  --secondary-text-color: #616161;
+  --link-color: #1976D2;
+  --dark-divider-opacity: 0.12;
+  --anypoint-button-emphasis-high-background-color: var(--accent-color);
+  --anypoint-dropdown-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.4);
+  --anypoint-autocomplete-dropdown-shadow: var(--anypoint-dropdown-shadow);
+
+  --code-background-color: #f5f7f9;
+  
+  --api-navigation-section-toggle-icon-color: #ff7979;
+
+  /* Text primary color on the accent background */
+  --text-primary-color: #000;
+  --dark-divider-opacity: 0.12;
+
+  /* HTTP method colors */
+  --http-get-color: #008000;
+  --http-post-color: #2196F3;
+  --http-put-color: #FFA500;
+  --http-patch-color: #9C27B0;
+  --http-delete-color: #F44336;
+  --http-options-color: rgba(128, 128, 128, 0.74);
+  --http-head-color: rgba(128, 128, 128, 0.74);
+  --http-connect-color: rgba(128, 128, 128, 0.74);
+  --http-trace-color: rgba(128, 128, 128, 0.74);
+  --http-method-label-get-background-color: var(--http-get-color);
+  --http-method-label-get-color: #fff;
+  --http-method-label-post-background-color: var(--http-post-color);
+  --http-method-label-post-color: #fff;
+  --http-method-label-put-background-color: var(--http-put-color);
+  --http-method-label-put-color: #000;
+  --http-method-label-delete-background-color: var(--http-delete-color);
+  --http-method-label-delete-color: #fff;
+  --http-method-label-options-background-color: var(--http-options-color);
+  --http-method-label-options-background-color: var(--primary-text-color);
+  --http-method-label-head-background-color: var(--http-head-color);
+  --http-method-label-head-color: var(--primary-text-color);
+  --http-method-label-patch-background-color: var(--http-patch-color);
+  --http-method-label-patch-color: #fff;
+
+  --anypoint-color-primary: var(--primary-color);
+  --anypoint-dialog-background-color: var(--secondary-background-color);
+  --anypoint-dialog-title-color: var(--primary-color);
+  --anypoint-dialog-content-color: var(--text-primary-color);
+  
+  --anypoint-item-body-secondary-color: #9E9E9E;
+}
+
+body.demo.styled.dark {
+  --primary-color: #ffcc80;
+  --primary-text-color: #fff;
+  --accent-color: #2196f3; /* #E040FB; */
+  --secondary-text-color: rgba(255, 255, 255, 0.84);
+  --primary-background-color: #0b0b0b;
+  --secondary-background-color: #313131;
+  --error-color: #ff9090;
+  --link-color: #30a3d7;
+  --input-background-color: #494949;
+  --active-background-color: #616161;
+
+  /* Text primary color on the accent background */
+  --text-primary-color: #fff;
+
+  --anypoint-dropdown-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.4);
+  --anypoint-autocomplete-dropdown-shadow: var(--anypoint-dropdown-shadow);
+
+  --anypoint-input-background-color: var(--input-background-color);
+  --anypoint-input-label-color: var(--primary-text-color);
+  --anypoint-input-input-color: var(--primary-text-color);
+  --anypoint-input-border-bottom-color: var(--primary-text-color);
+  --anypoint-input-focused-border-bottom-color: var(--primary-text-color);
+  --anypoint-input-label-background-color: rgb(66, 66, 66);
+  --anypoint-input-legacy-focus-background-color: #3a3b3c;
+  --anypoint-input-legacy-focus-border-color: #178bea;
+  --anypoint-input-info-message-color: var(--primary-text-color);
+
+  /* HTTP method colors */
+  --http-get-color: #c6f68d;
+  --http-post-color: #b39afd;
+  --http-put-color: #ffc77d;
+  --http-patch-color: #f186c0;
+  --http-delete-color: #FF5252;
+  --http-options-color: rgba(128, 128, 128, 0.74);
+  --http-head-color: rgba(128, 128, 128, 0.74);
+  --http-connect-color: rgba(128, 128, 128, 0.74);
+  --http-trace-color: rgba(128, 128, 128, 0.74);
+  --http-method-label-get-background-color: var(--http-get-color);
+  --http-method-label-get-color: #000;
+  --http-method-label-post-background-color: var(--http-post-color);
+  --http-method-label-post-color: #000;
+  --http-method-label-put-background-color: var(--http-put-color);
+  --http-method-label-put-color: #000;
+  --http-method-label-delete-background-color: var(--http-delete-color);
+  --http-method-label-delete-color: #000;
+  --http-method-label-options-background-color: var(--http-options-color);
+  --http-method-label-options-background-color: var(--primary-text-color);
+  --http-method-label-head-background-color: var(--http-head-color);
+  --http-method-label-head-color: var(--primary-text-color);
+  --http-method-label-patch-background-color: var(--http-patch-color);
+  --http-method-label-patch-color: #000;
+
+  /* dropdown & list items */
+  --anypoint-dropdown-menu-background-color: var(--input-background-color);
+  --anypoint-dropdown-menu-label-background-color: var(--primary-background-color);
+  --anypoint-dropdown-menu-focus-background-color: var(--active-background-color);
+  --anypoint-dropdown-menu-label-color: var(--primary-text-color);
+  --anypoint-dropdown-menu-info-message-color: var(--primary-text-color);
+  --anypoint-item-hover-background-color: var(--active-background-color);
+  --anypoint-item-focused-background-color: var(--primary-background-color);
+  --anypoint-item-before-background: transparent;
+  --anypoint-listbox-background-color: var(--input-background-color);
+  --anypoint-listbox-color: var(--primary-text-color);
+  --anypoint-autocomplete-background-color: var(--input-background-color);
+
+  /* buttons & icon buttons */
+  --anypoint-icon-button-emphasis-low-color: #c5c5c5;
+  --anypoint-button-emphasis-low-hover-background-color: var(--active-background-color);
+  --anypoint-button-emphasis-low-focus-background-color: var(--anypoint-button-emphasis-low-hover-background-color);
+  --anypoint-button-emphasis-low-focus-color: var(--primary-color);
+}

@@ -1,4 +1,6 @@
 export { default as  GraphApiNavigationElement } from './src/GraphApiNavigationElement';
+export { default as  GraphApiImportElement } from './src/GraphApiImportElement';
+export { default as  GraphAlertDialogElement }  from './src/GraphAlertDialogElement';
 
 export { NavigationEvents } from './src/events/navigation/NavigationEvents';
 export { NavigationEventTypes } from './src/events/navigation/EventTypes';
