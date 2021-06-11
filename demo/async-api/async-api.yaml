@@ -34,9 +34,7 @@ components:
             $ref: '#/components/schemas/sent-at'
     goodbye-msg:
       headers:
-        oneOf:
-          - $ref: '#/components/schemas/goodbye-headers-1'
-          - $ref: '#/components/schemas/goodbye-headers-2'
+        $ref: '#/components/schemas/goodbye-headers-1'
       payload:
         type: object
         properties:
@@ -54,7 +52,7 @@ components:
           description: You can put whatever you want here
           type: string
         Accept:
-          description: You must specificy accept type for response
+          description: You must specify accept type for response
           type: string
         x-request-id:
           description: Request id for tracing errors

@@ -1,7 +1,6 @@
 import { fixture, assert, html } from '@open-wc/testing';
-import { AmfStoreService, StoreEventTypes, StoreEvents } from '@api-client/amf-store';
+import { AmfStoreService, StoreEventTypes, StoreEvents, ns } from '@api-client/amf-store/worker.index.js';
 import { nextFrame, oneEvent } from '@open-wc/testing-helpers';
-import { ns } from '@api-components/amf-helper-mixin/src/Namespace.js';
 import '../../graph-api-navigation.js';
 import { 
   addingEndpointValue,

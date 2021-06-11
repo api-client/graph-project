@@ -5,10 +5,9 @@
 /* eslint-disable class-methods-use-this */
 import { LitElement, html } from 'lit-element';
 import { EventsTargetMixin } from '@advanced-rest-client/events-target-mixin';
-import { ns } from '@api-components/amf-helper-mixin/src/Namespace.js';
 import { styleMap } from 'lit-html/directives/style-map.js';
 import { classMap } from 'lit-html/directives/class-map.js';
-import { StoreEvents, StoreEventTypes, ApiSorting, EndpointsTree } from '@api-client/amf-store';
+import { StoreEvents, StoreEventTypes, ApiSorting, EndpointsTree, ns } from '@api-client/amf-store/worker.index.js';
 import { Styles as HttpStyles } from '@api-components/http-method-label';
 import '@anypoint-web-components/anypoint-button/anypoint-icon-button.js';
 import '@advanced-rest-client/arc-icons/arc-icon.js';
@@ -1644,7 +1643,6 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   }
 
   /**
-   * @param {ApiStoreStateDeleteEvent} e
    */
   async [operationDeletedHandler]() {
     const endpoints = this[endpointsValue];
