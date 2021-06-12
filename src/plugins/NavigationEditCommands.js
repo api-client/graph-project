@@ -1,5 +1,5 @@
 import { deleteOutline, addCircleOutline, edit } from '@advanced-rest-client/arc-icons';
-import { StoreEvents } from '@api-client/amf-store';
+import { StoreEvents } from '@api-client/amf-store/worker.index.js';
 import { ReportingEvents } from '../events/reporting/ReportingEvents.js';
 
 /** @typedef {import('@api-client/context-menu').ContextMenuCommand} ContextMenuCommand */
@@ -70,7 +70,7 @@ const commands = /** @type ContextMenuCommand[] */ ([
   },
   {
     type: 'separator',
-    target: ['endpoints', 'endpoint', 'operations', 'operation', 'documentation', 'schemas', 'schema'],
+    target: ['endpoints', 'endpoint', 'operations', 'operation', 'documentation', 'schemas', 'schema', 'custom-properties', 'custom-property'],
   },
   {
     target: 'endpoints',
@@ -282,6 +282,38 @@ const commands = /** @type ContextMenuCommand[] */ ([
         await StoreEvents.Type.delete(ctx.root, graphId);
       } catch (e) {
         ReportingEvents.error(this, e, `Unable to delete a schema: ${e.message}`, 'Navigation commands');
+      }
+    },
+  },
+
+  {
+    target: 'custom-properties',
+    label: 'Add property',
+    icon: addCircleOutline,
+    execute: (ctx) => {
+      const menu = /** @type GraphApiNavigationElement */ (ctx.root);
+      menu.addCustomProperty();
+    },
+  },
+  {
+    target: 'custom-property',
+    label: 'Rename',
+    icon: edit,
+    execute: (ctx) => renameTarget(ctx),
+  },
+  {
+    target: 'custom-property',
+    label: 'Delete',
+    icon: deleteOutline,
+    execute: async (ctx) => {
+      const { graphId } = ctx.target.dataset;
+      if (!graphId) {
+        return;
+      }
+      try {
+        await StoreEvents.CustomProperty.delete(ctx.root, graphId);
+      } catch (e) {
+        ReportingEvents.error(this, e, `Unable to delete a custom property: ${e.message}`, 'Navigation commands');
       }
     },
   },

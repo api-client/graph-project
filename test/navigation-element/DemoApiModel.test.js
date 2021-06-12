@@ -1,5 +1,5 @@
 import { fixture, assert, html } from '@open-wc/testing';
-import { AmfStoreService, StoreEventTypes } from '@api-client/amf-store';
+import { AmfStoreService, StoreEventTypes } from '@api-client/amf-store/worker.index.js';
 import { aTimeout, nextFrame, oneEvent } from '@open-wc/testing-helpers';
 import sinon from 'sinon';
 import { AmfLoader } from '../helpers/AmfLoader.js';
@@ -18,6 +18,8 @@ import {
   securityValue,
   shiftTabPressedValue,
   focusedItemValue,
+  customPropertiesValue,
+  queryCustomProperties,
 } from '../../src/GraphApiNavigationElement.js';
 import { ReportingEventTypes } from '../../src/events/reporting/ReportingEventTypes.js';
 
@@ -48,7 +50,9 @@ describe('GraphApiNavigationElement', () => {
           endpointsOpened
           documentationsOpened
           schemasOpened
-          securityOpened></graph-api-navigation>
+          securityOpened
+          customProperties
+          customPropertiesOpened></graph-api-navigation>
       `));
       await oneEvent(elm, 'graphload');
       await nextFrame();
@@ -64,7 +68,9 @@ describe('GraphApiNavigationElement', () => {
           endpointsOpened
           documentationsOpened
           schemasOpened
-          securityOpened></graph-api-navigation>
+          securityOpened
+          customProperties
+          customPropertiesOpened></graph-api-navigation>
       `));
       await oneEvent(elm, 'graphload');
       await nextFrame();
@@ -175,6 +181,21 @@ describe('GraphApiNavigationElement', () => {
         const items = element.shadowRoot.querySelectorAll('.security .list-item');
         assert.lengthOf(items, 3);
       });
+
+      it('has the custom properties', () => {
+        const panel = element.shadowRoot.querySelector('.custom-properties');
+        assert.ok(panel);
+      });
+
+      it('opens the custom properties', () => {
+        const panel = /** @type AnypointCollapseElement */ (element.shadowRoot.querySelector('.custom-properties anypoint-collapse'));
+        assert.isTrue(panel.opened);
+      });
+
+      it('has the custom property items', () => {
+        const items = element.shadowRoot.querySelectorAll('.custom-properties .list-item');
+        assert.lengthOf(items, 3);
+      });
     });
 
     describe('Toggling list items', () => {
@@ -247,6 +268,16 @@ describe('GraphApiNavigationElement', () => {
         const collapse = /** @type AnypointCollapseElement */ (title.nextElementSibling);
         assert.isFalse(collapse.opened, 'collapse is closed')
       });
+
+      it('toggles custom properties section', async () => {
+        const title = /** @type HTMLElement */ (element.shadowRoot.querySelector('.custom-properties .section-title'));
+        title.click();
+        await nextFrame();
+        // it is initially opened
+        assert.isFalse(element.customPropertiesOpened, 'customPropertiesOpened is updated');
+        const collapse = /** @type AnypointCollapseElement */ (title.nextElementSibling);
+        assert.isFalse(collapse.opened, 'collapse is closed')
+      });
     });
 
     describe('Selecting items', () => {
@@ -311,6 +342,16 @@ describe('GraphApiNavigationElement', () => {
         await nextFrame();
         assert.equal(element.selected, item.dataset.graphId, 'selected is set');
         assert.equal(element.selectedType, 'security', 'selectedType is set');
+        assert.isTrue(element.selectedItem === item, 'selectedItem is set');
+        assert.isTrue(item.classList.contains('selected'), 'the list item has the selected class');
+      });
+
+      it('selects a custom property', async () => {
+        const item = /** @type HTMLElement */ (element.shadowRoot.querySelector('.custom-properties anypoint-collapse .list-item'));
+        item.click();
+        await nextFrame();
+        assert.equal(element.selected, item.dataset.graphId, 'selected is set');
+        assert.equal(element.selectedType, 'custom-property', 'selectedType is set');
         assert.isTrue(element.selectedItem === item, 'selectedItem is set');
         assert.isTrue(item.classList.contains('selected'), 'the list item has the selected class');
       });
@@ -392,6 +433,13 @@ describe('GraphApiNavigationElement', () => {
         await nextFrame();
         const items = element.shadowRoot.querySelectorAll('.list-item.security');
         assert.lengthOf(items, 1, 'has only the OAuth2.0 security');
+      });
+
+      it('queries custom properties', async () => {
+        element.query = 'depr';
+        await nextFrame();
+        const items = element.shadowRoot.querySelectorAll('.list-item.custom-property');
+        assert.lengthOf(items, 1, 'has only the deprecated item');
       });
 
       it('Filters from the search input (search event)', async () => {
@@ -626,7 +674,7 @@ describe('GraphApiNavigationElement', () => {
       });
     });
 
-    describe('querying the schema data', () => {
+    describe('querying the security data', () => {
       let element = /** @type GraphApiNavigationElement */ (null);
       beforeEach(async () => { element = await noSortingFixture() });
 
@@ -669,6 +717,60 @@ describe('GraphApiNavigationElement', () => {
         element.addEventListener(ReportingEventTypes.error, spy);
         const ctrl = new AbortController();
         await element[querySecurity](ctrl.signal);
+        assert.isTrue(spy.called);
+      });
+    });
+
+    describe('querying the custom data', () => {
+      let element = /** @type GraphApiNavigationElement */ (null);
+      beforeEach(async () => { element = await noSortingFixture() });
+
+      it('sets the [customPropertiesValue]', async () => {
+        element[customPropertiesValue] = undefined;
+        const ctrl = new AbortController();
+        await element[queryCustomProperties](ctrl.signal);
+        assert.typeOf(element[customPropertiesValue], 'array');
+      });
+
+      it('ignores setting values when signal aborted', async () => {
+        element[customPropertiesValue] = undefined;
+        const ctrl = new AbortController();
+        const p = element[queryCustomProperties](ctrl.signal);
+        ctrl.abort();
+        await p;
+        assert.isUndefined(element[customPropertiesValue]);
+      });
+
+      it('ignores setting values when signal aborted (pre-execution)', async () => {
+        element[customPropertiesValue] = undefined;
+        const ctrl = new AbortController();
+        ctrl.abort();
+        await element[queryCustomProperties](ctrl.signal);
+        assert.isUndefined(element[customPropertiesValue]);
+      });
+
+      it('ignores querying when no customProperties', async () => {
+        element.customProperties = false;
+        const ctrl = new AbortController();
+        await element[queryCustomProperties](ctrl.signal);
+        assert.isUndefined(element[customPropertiesValue]);
+      });
+
+      it('dispatches error event when query error', async () => {
+        element.addEventListener(StoreEventTypes.CustomProperty.list, 
+          /**
+           * @param {CustomEvent} e 
+           */
+          function f(e) {
+            element.removeEventListener(StoreEventTypes.CustomProperty.list, f);
+            e.stopPropagation();
+            e.preventDefault();
+            e.detail.result = Promise.reject(new Error('test'));
+          });
+        const spy = sinon.spy();
+        element.addEventListener(ReportingEventTypes.error, spy);
+        const ctrl = new AbortController();
+        await element[queryCustomProperties](ctrl.signal);
         assert.isTrue(spy.called);
       });
     });

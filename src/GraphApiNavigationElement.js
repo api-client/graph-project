@@ -27,6 +27,7 @@ import { cancelEvent } from './Utils.js'
 /** @typedef {import('@api-client/amf-store').ApiOperation} ApiOperation */
 /** @typedef {import('@api-client/amf-store').ApiDocumentation} ApiDocumentation */
 /** @typedef {import('@api-client/amf-store').ApiNodeShape} ApiNodeShape */
+/** @typedef {import('@api-client/amf-store').ApiCustomDomainProperty} ApiCustomDomainProperty */
 /** @typedef {import('lit-html').TemplateResult} TemplateResult */
 /** @typedef {import('@anypoint-web-components/anypoint-collapse').AnypointCollapseElement} AnypointCollapseElement */
 /** @typedef {import('./types').EndpointItem} EndpointItem */
@@ -38,6 +39,7 @@ import { cancelEvent } from './Utils.js'
 /** @typedef {import('./types').EditableMenuItem} EditableMenuItem */
 /** @typedef {import('./types').EditableMenuType} EditableMenuType */
 /** @typedef {import('./types').SchemaAddType} SchemaAddType */
+/** @typedef {import('./types').CustomDomainPropertyListItem} CustomDomainPropertyListItem */
 
 export const apiIdValue = Symbol('apiIdValue');
 export const isAsyncValue = Symbol('isAsyncValue');
@@ -140,6 +142,20 @@ export const addSchemaInputTemplate = Symbol('addSchemaInputTemplate');
 export const addSchemaKeydownHandler = Symbol('addSchemaKeydownHandler');
 export const commitNewSchema = Symbol('commitNewSchema');
 export const addingSchemaTypeValue = Symbol('addingSchemaTypeValue');
+export const queryCustomProperties = Symbol('queryCustomProperties');
+export const customPropertiesValue = Symbol('customPropertiesValue');
+export const customPropertiesOption = Symbol('customPropertiesOption');
+export const customPropertiesOptionChange = Symbol('customPropertiesOptionChange');
+export const customPropertiesTemplate = Symbol('customPropertiesTemplate');
+export const customPropertyTemplate = Symbol('customPropertyTemplate');
+export const getFilteredCustomProperties = Symbol('getFilteredCustomProperties');
+export const addCustomPropertyInputTemplate = Symbol('addCustomPropertyInputTemplate');
+export const addingCustomPropertyValue = Symbol('addingCustomPropertyValue');
+export const addCustomPropertyKeydownHandler = Symbol('addCustomPropertyKeydownHandler');
+export const commitNewCustomProperty = Symbol('commitNewCustomProperty');
+export const customPropertyCreatedHandler = Symbol('customPropertyCreatedHandler');
+export const customPropertyUpdatedHandler = Symbol('customPropertyUpdatedHandler');
+export const customPropertyDeletedHandler = Symbol('customPropertyDeletedHandler');
 
 export default class GraphApiNavigationElement extends EventsTargetMixin(LitElement) {
   static get styles() {
@@ -262,6 +278,30 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     this.requestUpdate('query', old);
   }
 
+  /**
+   * @returns {boolean|undefined} When set it renders the domain custom properties list in the navigation.
+   * In RAML these are annotations and in OAS it's a vendor extension.
+   * 
+   * Note, when setting it to true it makes the element to query for the data.
+   * When setting it to false, the existing data are cleared.
+   */
+  get customProperties() {
+    return this[customPropertiesOption];
+  }
+
+  /**
+   * @param {boolean} value
+   */
+  set customProperties(value) {
+    const old = this[customPropertiesOption];
+    if (old === value) {
+      return;
+    }
+    this[customPropertiesOption] = value;
+    this.requestUpdate('customProperties', old);
+    this[customPropertiesOptionChange](value);
+  }
+
   static get properties() {
     return {
       /** 
@@ -348,6 +388,18 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
        * The user can double-click on a menu item and edit its name.
        */
       edit: { type: Boolean, reflect: true, },
+      /**
+       * When set it renders the domain custom properties list in the navigation.
+       * In RAML these are annotations and in OAS it's a vendor extension.
+       * 
+       * Note, when setting it to true it makes the element to query for the data.
+       * When setting it to false, the existing data are cleared.
+       */
+      customProperties: { type: Boolean, reflect: true, },
+      /**
+       * Determines and changes state of custom properties panel.
+       */
+      customPropertiesOpened: { type: Boolean, reflect: true, },
     };
   }
 
@@ -363,6 +415,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     this.documentationsOpened = false;
     this.schemasOpened = false;
     this.securityOpened = false;
+    this.customPropertiesOpened = false;
     this.filter = false;
     this.edit = false;
     this.manualQuery = false;
@@ -383,6 +436,10 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
      * @type {SecurityItem[]}
      */
     this[securityValue] = undefined;
+    /** 
+     * @type {CustomDomainPropertyListItem[]}
+     */
+    this[customPropertiesValue] = undefined;
     /** 
      * The processed and final query term for the list items.
      * @type {string}
@@ -419,6 +476,9 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     this[schemaCreatedHandler] = this[schemaCreatedHandler].bind(this);
     this[schemaUpdatedHandler] = this[schemaUpdatedHandler].bind(this);
     this[schemaDeletedHandler] = this[schemaDeletedHandler].bind(this);
+    this[customPropertyCreatedHandler] = this[customPropertyCreatedHandler].bind(this);
+    this[customPropertyUpdatedHandler] = this[customPropertyUpdatedHandler].bind(this);
+    this[customPropertyDeletedHandler] = this[customPropertyDeletedHandler].bind(this);
   }
 
   /**
@@ -464,6 +524,9 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     node.addEventListener(StoreEventTypes.Type.State.created, this[schemaCreatedHandler]);
     node.addEventListener(StoreEventTypes.Type.State.updated, this[schemaUpdatedHandler]);
     node.addEventListener(StoreEventTypes.Type.State.deleted, this[schemaDeletedHandler]);
+    node.addEventListener(StoreEventTypes.CustomProperty.State.created, this[customPropertyCreatedHandler]);
+    node.addEventListener(StoreEventTypes.CustomProperty.State.updated, this[customPropertyUpdatedHandler]);
+    node.addEventListener(StoreEventTypes.CustomProperty.State.deleted, this[customPropertyDeletedHandler]);
   }
 
   /**
@@ -483,6 +546,9 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     node.removeEventListener(StoreEventTypes.Type.State.created, this[schemaCreatedHandler]);
     node.removeEventListener(StoreEventTypes.Type.State.updated, this[schemaUpdatedHandler]);
     node.removeEventListener(StoreEventTypes.Type.State.deleted, this[schemaDeletedHandler]);
+    node.removeEventListener(StoreEventTypes.CustomProperty.State.created, this[customPropertyCreatedHandler]);
+    node.removeEventListener(StoreEventTypes.CustomProperty.State.updated, this[customPropertyUpdatedHandler]);
+    node.removeEventListener(StoreEventTypes.CustomProperty.State.deleted, this[customPropertyDeletedHandler]);
   }
 
   /**
@@ -501,6 +567,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     await this[queryDocumentations](ctrl.signal);
     await this[querySchemas](ctrl.signal);
     await this[querySecurity](ctrl.signal);
+    await this[queryCustomProperties](ctrl.signal);
     this[queryingValue] = false;
     this[abortControllerValue] = undefined;
     this[openedEndpointsValue] = [];
@@ -613,6 +680,45 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     } catch (e) {
       TelemetryEvents.exception(this, e.message, false);
       ReportingEvents.error(this, e, `Enable to query for Security data: ${e.message}`, this.localName);
+    }
+  }
+
+  /**
+   * Queries and sets the custom domain properties data.
+   * @param {AbortSignal} signal
+   */
+  async [queryCustomProperties](signal) {
+    this[customPropertiesValue] = undefined;
+    if (signal.aborted || !this.customProperties) {
+      return;
+    }
+    try {
+      const result = await StoreEvents.CustomProperty.list(this);
+      if (signal.aborted) {
+        return;
+      }
+      this[customPropertiesValue] = result;
+    } catch (e) {
+      TelemetryEvents.exception(this, e.message, false);
+      ReportingEvents.error(this, e, `Enable to query for Custom Properties data: ${e.message}`, this.localName);
+    }
+  }
+
+  /**
+   * A function called when the `customProperties` configuration option change.
+   * It either queries for the data or clears it when the option change.
+   * @param {boolean} value
+   */
+  async [customPropertiesOptionChange](value) {
+    if (!value) {
+      this[customPropertiesValue] = undefined;
+      this.requestUpdate();
+    } else if (this.apiId) {
+      const ctrl = new AbortController();
+      this[abortControllerValue] = ctrl;
+      await this[queryCustomProperties](ctrl.signal);
+      this[abortControllerValue] = undefined;
+      this.requestUpdate();
     }
   }
 
@@ -882,6 +988,23 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       (doc.name || '').toLocaleLowerCase().includes(q) || 
       (doc.displayName || '').toLocaleLowerCase().includes(q) || 
       (doc.type || '').toLocaleLowerCase().includes(q));
+  }
+
+  /**
+   * @returns {CustomDomainPropertyListItem[]} List of custom domain properties items filtered by the current query.
+   */
+  [getFilteredCustomProperties]() {
+    const items = this[customPropertiesValue];
+    if (!Array.isArray(items) || !items.length) {
+      return [];
+    }
+    const q = this[queryValue];
+    if (!q) {
+      return items;
+    }
+    return items.filter((doc) => 
+      (doc.name || '').toLocaleLowerCase().includes(q) || 
+      (doc.displayName || '').toLocaleLowerCase().includes(q));
   }
 
   /**
@@ -1284,6 +1407,8 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       selectable = (this[schemasValue] || []).find((item) => item.id === id);
     } else if (type === 'security') {
       selectable = (this[securityValue] || []).find((item) => item.id === id);
+    } else if (type === 'custom-property') {
+      selectable = (this[customPropertiesValue] || []).find((item) => item.id === id);
     }
     return selectable;
   }
@@ -1418,6 +1543,26 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   }
 
   /**
+   * Triggers a flow when the user can define a new custom property in the navigation.
+   * This renders an input in the view (in the custom properties list) where the user can enter the object name.
+   */
+  async addCustomProperty() {
+    if (!this.customProperties) {
+      return;
+    }
+    if (!this.customPropertiesOpened) {
+      this.customPropertiesOpened = true;
+    }
+    this[addingCustomPropertyValue] = true;
+    await this.requestUpdate();
+    const wrap = this.shadowRoot.querySelector('.add-custom-property-input');
+    wrap.scrollIntoView();
+    const input = wrap.querySelector('input');
+    input.focus();
+    input.select();
+  }
+
+  /**
    * Resets all tabindex attributes to the appropriate value based on the
    * current selection state. The appropriate value is `0` (focusable) for
    * the default selected item, and `-1` (not keyboard focusable) for all
@@ -1501,6 +1646,22 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     }
   }
 
+  /**
+   * Event handler for the keydown event of the add custom domain property input.
+   * @param {KeyboardEvent} e
+   */
+  [addCustomPropertyKeydownHandler](e) {
+    if (e.key === 'Enter' || e.key === 'NumpadEnter') {
+      e.preventDefault();
+      const input = /** @type HTMLInputElement */ (e.target);
+      this[commitNewCustomProperty](input.value);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      this[addingCustomPropertyValue] = false;
+      this.requestUpdate();
+    }
+  }
+
   async [commitNewEndpoint]() {
     const input = /** @type HTMLInputElement */ (this.shadowRoot.querySelector('.add-endpoint-input input'))
     if (!input) {
@@ -1561,6 +1722,19 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
     this[addingSchemaValue] = false;
     this[addingSchemaTypeValue] = undefined;
     await StoreEvents.Type.add(this, opts);
+    this.requestUpdate();
+  }
+
+  /**
+   * @param {string} value The name of the custom property.
+   */
+  async [commitNewCustomProperty](value='') {
+    const name = value.trim();
+    if (!name) {
+      return;
+    }
+    this[addingCustomPropertyValue] = false;
+    await StoreEvents.CustomProperty.add(this, { name });
     this.requestUpdate();
   }
 
@@ -1774,6 +1948,58 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   }
 
   /**
+   * @param {ApiStoreStateCreateEvent} e
+   */
+  [customPropertyCreatedHandler](e) {
+    const schema = /** @type ApiCustomDomainProperty */ (e.detail.item);
+    if (!this[customPropertiesValue]) {
+      this[customPropertiesValue] = [];
+    }
+    const item = /** @type CustomDomainPropertyListItem */ ({
+      id: schema.id,
+      name: schema.name,
+      displayName: schema.displayName,
+    });
+    this[customPropertiesValue].push(item);
+    this.requestUpdate();
+  }
+
+  /**
+   * @param {ApiStoreStateUpdateEvent} e
+   */
+  [customPropertyUpdatedHandler](e) {
+    const { property, graphId } = e.detail;
+    if (!['name', 'displayName'].includes(property)) {
+      return;
+    }
+    const model = /** @type CustomDomainPropertyListItem */ (this[findViewModelItem](graphId));
+    if (!model) {
+      return;
+    }
+    const schema = /** @type ApiCustomDomainProperty */ (e.detail.item);
+    model.name = schema.name;
+    model.displayName = schema.displayName;
+    this.requestUpdate();
+  }
+
+  /**
+   * @param {ApiStoreStateDeleteEvent} e
+   */
+  [customPropertyDeletedHandler](e) {
+    const items = this[customPropertiesValue];
+    if (!items || !items.length || !this.customProperties) {
+      return;
+    }
+    const { graphId } = e.detail;
+    const index = items.findIndex((item) => item.id === graphId);
+    if (index === -1) {
+      return;
+    }
+    items.splice(index, 1);
+    this.requestUpdate();
+  }
+
+  /**
    * Triggers a rename action for the menu item identified by the `id`.
    * @param {string} id The domain id of the item to edit.
    */
@@ -1819,6 +2045,13 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       const schema = schemas.find((item) => item.id === id);
       if (schema) {
         return schema;
+      }
+    }
+    const customProps = /** @type CustomDomainPropertyListItem[] */ (this[customPropertiesValue]);
+    if (customProps && customProps.length) {
+      const prop = customProps.find((item) => item.id === id);
+      if (prop) {
+        return prop;
       }
     }
     return null;
@@ -1893,6 +2126,11 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       const { displayName } = obj;
       const prop = displayName ? 'displayName' : 'name';
       promise = StoreEvents.Type.update(this, id, prop, updateValue);
+    } else if (type === 'custom-property') {
+      const obj = await StoreEvents.CustomProperty.get(this, id);
+      const { displayName } = obj;
+      const prop = displayName ? 'displayName' : 'name';
+      promise = StoreEvents.CustomProperty.update(this, id, prop, updateValue);
     }
     try {
       await promise;
@@ -1924,6 +2162,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       ${this[documentationsTemplate]()}
       ${this[schemasTemplate]()}
       ${this[securitiesTemplate]()}
+      ${this[customPropertiesTemplate]()}
     </div>
     `;
   }
@@ -2404,6 +2643,89 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   }
 
   /**
+   * @return {TemplateResult|string} The template for the custom domain properties section.
+   */
+  [customPropertiesTemplate]() {
+    const { edit, customProperties, customPropertiesOpened } = this;
+    if (!customProperties) {
+      return '';
+    }
+    const items = /** @type CustomDomainPropertyListItem[] */ (this[getFilteredCustomProperties]());
+    if (!items.length && !edit) {
+      return '';
+    }
+    const classes = {
+      'custom-properties': true,
+      opened: customPropertiesOpened,
+    };
+    const toggleState = customPropertiesOpened ? 'Expanded' : 'Collapsed';
+    const addingProperty = this[addingCustomPropertyValue];
+    const showItems = !!items.length;
+    const showEmpty = !showItems && !addingProperty;
+    return html`
+    <section
+      class="${classMap(classes)}"
+    >
+      <div
+        class="section-title"
+        data-property="customPropertiesOpened"
+        data-section="custom-properties"
+        @click="${this[toggleSectionClickHandler]}"
+        @keydown="${this[toggleSectionKeydownHandler]}"
+        title="Toggle the list"
+        aria-haspopup="true"
+        role="menuitem"
+      >
+        <div class="title-h3">Custom properties</div>
+        <anypoint-icon-button
+          part="toggle-button"
+          class="toggle-button section"
+          aria-label="Toggle the list"
+          ?compatibility="${this.compatibility}"
+          tabindex="-1"
+        >
+          <arc-icon aria-label="${toggleState}" icon="keyboardArrowDown"></arc-icon>
+        </anypoint-icon-button>
+      </div>
+      <anypoint-collapse .opened="${customPropertiesOpened}">
+        <div class="children">
+          ${addingProperty ? this[addCustomPropertyInputTemplate]() : ''}
+          ${showItems ? items.map((item) => this[customPropertyTemplate](item)) : ''}
+          ${showEmpty ? html`<p class="empty-section">No custom properties in this API</p>` : ''}
+        </div>
+      </anypoint-collapse>
+    </section>
+    `;
+  }
+
+  /**
+   * @param {CustomDomainPropertyListItem} item
+   * @return {TemplateResult} The template for the security list item.
+   */
+  [customPropertyTemplate](item) {
+    const { id, displayName, name, selected, secondarySelected, nameEditor } = item;
+    const label = displayName || name || 'Unnamed property';
+    const classes = {
+      'list-item': true,
+      'custom-property': true,
+      selected, 
+      secondarySelected,
+    }
+    return html`
+    <div
+      part="api-navigation-list-item"
+      class="${classMap(classes)}"
+      role="menuitem"
+      tabindex="-1"
+      data-graph-id="${id}"
+      data-graph-shape="custom-property"
+      @click="${this[itemClickHandler]}"
+    >
+      ${nameEditor ? this[renameInputTemplate](id, label, 'custom-property') : label}
+   </div>`;
+  }
+
+  /**
    * @return {TemplateResult|string} The template for the filter input.
    */
   [filterTemplate]() {
@@ -2494,6 +2816,22 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
       data-graph-shape="schema"
     >
       <input type="text" class="add-schema-input" @keydown="${this[addSchemaKeydownHandler]}"/>
+      <arc-icon icon="add" title="Enter to save, ESC to cancel"></arc-icon>
+    </div>
+    `;
+  }
+
+  /**
+   * @return {TemplateResult} The template for the new custom domain property input.
+   */
+  [addCustomPropertyInputTemplate]() {
+    return html`
+    <div
+      part="api-navigation-input-item"
+      class="input-item add-custom-property-input"
+      data-graph-shape="schema"
+    >
+      <input type="text" class="add-custom-property-input" @keydown="${this[addCustomPropertyKeydownHandler]}"/>
       <arc-icon icon="add" title="Enter to save, ESC to cancel"></arc-icon>
     </div>
     `;

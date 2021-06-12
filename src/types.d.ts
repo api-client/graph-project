@@ -1,4 +1,4 @@
-import { ApiEndpointsTreeItem, ApiOperationListItem, ApiDocumentation, ApiNodeShapeListItem, ApiSecuritySchemeListItem } from '@api-client/amf-store';
+import { ApiEndpointsTreeItem, ApiOperationListItem, ApiDocumentation, ApiNodeShapeListItem, ApiSecuritySchemeListItem, ApiCustomDomainPropertyListItem } from '@api-client/amf-store';
 
 interface SelectableMenuItem {
   /**
@@ -26,6 +26,7 @@ export declare interface OperationItem extends ApiOperationListItem, SelectableM
 export declare interface DocumentationItem extends ApiDocumentation, SelectableMenuItem, EditableMenuItem {}
 export declare interface NodeShapeItem extends ApiNodeShapeListItem, SelectableMenuItem, EditableMenuItem {}
 export declare interface SecurityItem extends ApiSecuritySchemeListItem, SelectableMenuItem {}
+export declare interface CustomDomainPropertyListItem extends ApiCustomDomainPropertyListItem, SelectableMenuItem, EditableMenuItem {}
 
-export declare type EditableMenuType = 'endpoint'|'operation'|'documentation'|'schema';
+export declare type EditableMenuType = 'endpoint'|'operation'|'documentation'|'schema'|'custom-property';
 export declare type SchemaAddType = 'scalar'|'object'|'file'|'array'|'union';

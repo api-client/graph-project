@@ -6,7 +6,7 @@ import '@anypoint-web-components/anypoint-dropdown-menu/anypoint-dropdown-menu.j
 import '@anypoint-web-components/anypoint-listbox/anypoint-listbox.js';
 import '@anypoint-web-components/anypoint-item/anypoint-item.js';
 import '@anypoint-web-components/anypoint-checkbox/anypoint-checkbox.js';
-import { AmfStoreService } from '@api-client/amf-store';
+import { AmfStoreService } from '@api-client/amf-store/worker.index.js';
 import { NavigationEventTypes, NavigationEditCommands, NavigationContextMenu, ReportingEventTypes } from '../index.js';
 import '../graph-api-navigation.js';
 
@@ -21,9 +21,9 @@ class ComponentPage extends DemoPage {
       'loaded', 'initialized',
       'query',
       'latestSelected', 'latestType', 'latestEndpoint',
-      'summary', 'sort', 'filter',
+      'summary', 'sort', 'filter', 'customProperties',
       'selectedId', 'selectedType', 'selectedOptions',
-      'edit', 'apiId'
+      'edit', 'apiId',
     ]);
     this.loaded = false;
     this.initialized = false;
@@ -32,6 +32,7 @@ class ComponentPage extends DemoPage {
     this.sort = true;
     this.filter = true;
     this.edit = true;
+    this.customProperties = true;
     this.selectedId = undefined;
     this.selectedType = undefined;
     this.selectedOptions = undefined;
@@ -145,7 +146,7 @@ class ComponentPage extends DemoPage {
   }
 
   _navTemplate() {
-    const { demoStates, darkThemeActive, summary, sort, filter, edit, selectedId, selectedOptions, selectedType, apiId } = this;
+    const { demoStates, darkThemeActive, summary, sort, filter, edit, selectedId, selectedOptions, selectedType, apiId, customProperties } = this;
     return html`
     <arc-interactive-demo
       .states="${demoStates}"
@@ -159,6 +160,7 @@ class ComponentPage extends DemoPage {
         ?sort="${sort}"
         ?filter="${filter}"
         ?edit="${edit}"
+        ?customProperties="${customProperties}"
         manualQuery
         slot="content"
       >
@@ -200,6 +202,15 @@ class ComponentPage extends DemoPage {
         @change="${this._toggleMainOption}"
       >
         Edit graph
+      </anypoint-checkbox>
+      <anypoint-checkbox
+        aria-describedby="mainOptionsLabel"
+        slot="options"
+        name="customProperties"
+        .checked="${filter}"
+        @change="${this._toggleMainOption}"
+      >
+        Custom Properties
       </anypoint-checkbox>
 
     </arc-interactive-demo>

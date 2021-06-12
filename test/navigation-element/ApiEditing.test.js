@@ -8,6 +8,7 @@ import {
   addingExternalValue,
   addingSchemaValue,
   addingSchemaTypeValue,
+  addingCustomPropertyValue,
 } from '../../src/GraphApiNavigationElement.js';
 
 /** @typedef {import('@anypoint-web-components/anypoint-collapse').AnypointCollapseElement} AnypointCollapseElement */
@@ -30,7 +31,7 @@ describe('GraphApiNavigationElement', () => {
      */
     async function dataFixture() {
       const elm = /** @type GraphApiNavigationElement */ (await fixture(html`
-        <graph-api-navigation edit manualQuery></graph-api-navigation>
+        <graph-api-navigation edit manualQuery customProperties></graph-api-navigation>
       `));
       await elm.queryGraph();
       // await oneEvent(elm, 'graphload');
@@ -893,6 +894,213 @@ describe('GraphApiNavigationElement', () => {
           await StoreEvents.Type.delete(window, id);
           await nextFrame();
           const node = /** @type HTMLElement */ (element.shadowRoot.querySelector(`.schemas .list-item`));
+          assert.notOk(node, 'item is removed');
+        });
+      });
+    });
+
+    describe('Custom properties editing', () => {
+      describe('Data rendering', () => {
+        let element = /** @type GraphApiNavigationElement */ (null);
+        before(async () => { element = await dataFixture() });
+
+        it('renders the section title without properties', () => {
+          const title = element.shadowRoot.querySelector('.custom-properties .section-title');
+          assert.ok(title);
+        });
+
+        it('renders the empty info', () => {
+          const p = element.shadowRoot.querySelector('.custom-properties .empty-section');
+          assert.ok(p, 'has the info');
+          assert.equal(p.textContent.trim(), 'No custom properties in this API');
+        });
+      });
+
+      describe('Adding a custom property', () => {
+        let element = /** @type GraphApiNavigationElement */ (null);
+        beforeEach(async () => { 
+          await store.createWebApi({});
+          element = await dataFixture() 
+        });
+
+        it('opens the section when not opened', async () => {
+          await element.addCustomProperty();
+          assert.isTrue(element.customPropertiesOpened);
+        });
+
+        it('sets the [addingCustomPropertyValue]', async () => {
+          await element.addCustomProperty();
+          assert.isTrue(element[addingCustomPropertyValue]);
+        });
+
+        it('renders the input element inside the schemas', async () => {
+          await element.addCustomProperty();
+          const input = element.shadowRoot.querySelector('.add-custom-property-input input');
+          assert.ok(input);
+        });
+
+        it('focuses on the name input for inline docs', async () => {
+          await element.addCustomProperty();
+          const input = element.shadowRoot.querySelector('.add-custom-property-input input');
+          assert.isTrue(element.shadowRoot.activeElement === input, 'has focus in the shadow DOM');
+        });
+
+        it('removes the input when Escape', async () => {
+          await element.addCustomProperty();
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-custom-property-input input'));
+          input.value = 'test';
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Escape',
+            code: 'Escape',
+          }));
+          await nextFrame();
+          const node = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-custom-property-input input'));
+          assert.notOk(node, 'input is not in the DOM')
+        });
+
+        function dispatchEnter(input) {
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Enter',
+            code: 'Enter',
+          }));
+        }
+
+        it('adds new property on enter', async () => {
+          await element.addCustomProperty();
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-custom-property-input input'));
+          input.value = 'A property';
+          dispatchEnter(input);
+          const e = await oneEvent(window, StoreEventTypes.CustomProperty.State.created);
+          assert.equal(e.detail.item.name, 'A property', 'created the object');
+          assert.equal(e.detail.item.types[0], ns.aml.vocabularies.document.DomainProperty, 'has the object type');
+        });
+
+        it('renders added schema on enter', async () => {
+          await element.addCustomProperty();
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector('.add-custom-property-input input'));
+          input.value = 'A property';
+          dispatchEnter(input);
+          await oneEvent(window, StoreEventTypes.CustomProperty.State.created);
+          await nextFrame();
+          const node = element.shadowRoot.querySelector('.list-item.custom-property');
+          assert.ok(node, 'has the item');
+          assert.equal(node.textContent.trim(), 'A property', 'renders the name');
+        });
+      });
+
+      describe('Editing custom property name', () => {
+        let element = /** @type GraphApiNavigationElement */ (null);
+        const name = 'A property';
+        let id;
+
+        beforeEach(async () => {
+          await store.createWebApi({});
+          id = (await store.addCustomDomainProperty({ name })).id;
+          element = await dataFixture();
+        });
+
+        it('renders the input instead of the list item', async () => {
+          await element.renameAction(id);
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id}"]`));
+          assert.ok(input, 'has the input');
+        });
+
+        it('cancels on Escape', async () => {
+          await element.renameAction(id);
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id}"]`));
+          input.value = 'test';
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Escape',
+            code: 'Escape',
+          }));
+          await nextFrame();
+          const node = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id}"]`));
+          assert.notOk(node, 'input is not in the DOM')
+        });
+
+        it('updates the name on enter', async () => {
+          await element.renameAction(id);
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id}"]`));
+          input.value = 'updated';
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Enter',
+            code: 'Enter',
+          }));
+          const e = await oneEvent(window, StoreEventTypes.CustomProperty.State.updated);
+          assert.equal(e.detail.item.name, 'updated', 'updates the name');
+        });
+
+        it('updates the name on input blur', async () => {
+          await element.renameAction(id);
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id}"]`));
+          input.value = 'updated';
+          input.dispatchEvent(new Event('blur'));
+          const e = await oneEvent(window, StoreEventTypes.CustomProperty.State.updated);
+          assert.equal(e.detail.item.name, 'updated', 'updates the name');
+        });
+
+        it('renders the new name after input closes', async () => {
+          await element.renameAction(id);
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id}"]`));
+          input.value = 'updated';
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Enter',
+            code: 'Enter',
+          }));
+          await oneEvent(window, StoreEventTypes.CustomProperty.State.updated);
+          await nextFrame();
+          const node = element.shadowRoot.querySelector(`.list-item[data-graph-id="${id}"]`);
+          assert.ok(node, 'has the item');
+          assert.equal(node.textContent.trim(), 'updated', 'renders the name');
+        });
+
+        it('updates the display name when present', async () => {
+          await store.updateCustomDomainProperty(id, 'displayName', 'a dn');
+          await element.renameAction(id);
+          const input = /** @type HTMLInputElement */ (element.shadowRoot.querySelector(`input[data-id="${id}"]`));
+          input.value = 'updated';
+          input.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: 'Enter',
+            code: 'Enter',
+          }));
+          const e = await oneEvent(window, StoreEventTypes.CustomProperty.State.updated);
+          assert.equal(e.detail.item.displayName, 'updated', 'updates the displayName');
+        });
+      });
+
+      describe('Deleting a custom property', () => {
+        let element = /** @type GraphApiNavigationElement */ (null);
+        const name = 'A property';
+        let id;
+
+        beforeEach(async () => {
+          await store.createWebApi({});
+          id = (await store.addType({ name })).id;
+          element = await dataFixture();
+        });
+
+        it('removes list item from the view', async () => {
+          await StoreEvents.CustomProperty.delete(window, id);
+          await nextFrame();
+          const node = /** @type HTMLElement */ (element.shadowRoot.querySelector(`.custom-properties .list-item`));
           assert.notOk(node, 'item is removed');
         });
       });

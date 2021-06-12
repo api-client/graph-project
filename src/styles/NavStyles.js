@@ -169,7 +169,8 @@ section.opened .toggle-button.section {
 
 .schemas .list-item,
 .documentation .list-item,
-.security .list-item {
+.security .list-item,
+.custom-properties .list-item {
   padding-left: var(--api-navigation-list-item-padded-padding, 24px);
 }
 

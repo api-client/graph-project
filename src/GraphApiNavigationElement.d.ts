@@ -1,7 +1,7 @@
 import { LitElement, TemplateResult, CSSResult } from 'lit-element';
 import { EventsTargetMixin } from '@advanced-rest-client/events-target-mixin';
 import { ApiEndPoint, ApiEndPointWithOperationsListItem, ApiOperation, ApiStoreStateCreateEvent, ApiStoreStateDeleteEvent, ApiStoreStateUpdateEvent, ApiDocumentation, ApiNodeShape } from '@api-client/amf-store';
-import { EndpointItem, OperationItem, DocumentationItem, NodeShapeItem, SecurityItem, SelectableMenuItem, EditableMenuItem, EditableMenuType, SchemaAddType } from './types';
+import { EndpointItem, OperationItem, DocumentationItem, NodeShapeItem, SecurityItem, SelectableMenuItem, EditableMenuItem, EditableMenuType, SchemaAddType, CustomDomainPropertyListItem } from './types';
 
 export declare const apiIdValue: unique symbol;
 export declare const isAsyncValue: unique symbol;
@@ -105,6 +105,17 @@ export declare const addSchemaInputTemplate: unique symbol;
 export declare const addSchemaKeydownHandler: unique symbol;
 export declare const commitNewSchema: unique symbol;
 export declare const addingSchemaTypeValue: unique symbol;
+export declare const queryCustomProperties: unique symbol;
+export declare const customPropertiesValue: unique symbol;
+export declare const customPropertiesOption: unique symbol;
+export declare const customPropertiesOptionChange: unique symbol;
+export declare const customPropertiesTemplate: unique symbol;
+export declare const customPropertyTemplate: unique symbol;
+export declare const getFilteredCustomProperties: unique symbol;
+export declare const addCustomPropertyInputTemplate: unique symbol;
+export declare const addingCustomPropertyValue: unique symbol;
+export declare const addCustomPropertyKeydownHandler: unique symbol;
+export declare const commitNewCustomProperty: unique symbol;
 
 /**
  * @fires graphload
@@ -141,6 +152,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   [addingExternalValue]?: boolean;
   [addingSchemaValue]?: boolean;
   [addingSchemaTypeValue]?: string;
+  [addingCustomPropertyValue]?: boolean;
 
   /** 
    * When true then the element is currently querying for the graph data.
@@ -152,7 +164,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    * When calling `abort` on the controller the element stops querying and processing the graph data.
    * All data that already has been processed are not cleared.
    */
-  get abortController(): AbortController|undefined;
+  get abortController(): AbortController | undefined;
 
   /**
    * @returns true when `_docs` property is set with values
@@ -177,12 +189,12 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   /**
    * A reference to currently selected element.
    */
-  get selectedItem(): HTMLElement|undefined;
+  get selectedItem(): HTMLElement | undefined;
 
   /**
    * The currently focused item.
    */
-  get focusedItem(): HTMLElement|undefined;
+  get focusedItem(): HTMLElement | undefined;
 
   /** 
    * When this property change the element queries the graph store for the data model.
@@ -284,6 +296,23 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   */
   edit: boolean;
 
+  /**
+   * @returns {boolean|undefined} When set it renders the domain custom properties list in the navigation.
+   * In RAML these are annotations and in OAS it's a vendor extension.
+   * 
+   * Note, when setting it to true it makes the element to query for the data.
+   * When setting it to false, the existing data are cleared.
+   * @attribute
+   */
+  customProperties: boolean;
+  [customPropertiesOption]: boolean;
+  [customPropertiesValue]: CustomDomainPropertyListItem[];
+  /**
+   * Determines and changes state of custom properties panel.
+   * @attribute
+   */
+  customPropertiesOpened: boolean;
+
   constructor();
 
   /**
@@ -323,13 +352,22 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    * Queries and sets security data
    */
   [querySecurity](signal: AbortSignal): Promise<void>;
+  /**
+   * Queries and sets the custom domain properties data.
+   */
+  [queryCustomProperties](signal: AbortSignal): Promise<void>;
+  /**
+   * A function called when the `customProperties` configuration option change.
+   * It either queries for the data or clears it when the option change.
+   */
+  [customPropertiesOptionChange](value: boolean): Promise<void>;
 
   [createFlatTreeItems](items: ApiEndPointWithOperationsListItem[]): EndpointItem[];
 
   /**
    * Filters the current endpoints by the current query value.
    */
-  [getFilteredEndpoints](): EndpointItem[]|undefined;
+  [getFilteredEndpoints](): EndpointItem[] | undefined;
 
   /**
    * Computes `style` attribute value for endpoint item.
@@ -401,6 +439,11 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    * @returns List of security items filtered by the current query.
    */
   [getFilteredSecurity](): SecurityItem[];
+
+  /**
+   * @returns List of custom domain properties items filtered by the current query.
+   */
+  [getFilteredCustomProperties](): CustomDomainPropertyListItem[];
 
   /**
    * A handler for the focus event on this element.
@@ -511,7 +554,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    * @param id The domain id of the menu item.
    * @param type The type of the data.
    */
-  [findSelectable](id: string, type: string): SelectableMenuItem|null;
+  [findSelectable](id: string, type: string): SelectableMenuItem | null;
 
   /**
    * @param value The new query. Empty or null to clear the query
@@ -562,6 +605,11 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    */
   addSchema(type?: SchemaAddType): Promise<void>;
   /**
+   * Triggers a flow when the user can define a new custom property in the navigation.
+   * This renders an input in the view (in the custom properties list) where the user can enter the object name.
+   */
+  addCustomProperty(): Promise<void>;
+  /**
    * Resets all tabindex attributes to the appropriate value based on the
    * current selection state. The appropriate value is `0` (focusable) for
    * the default selected item, and `-1` (not keyboard focusable) for all
@@ -590,16 +638,24 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    * Event handler for the keydown event of the add schema input.
    */
   [addSchemaKeydownHandler](e: KeyboardEvent): void;
+  /**
+   * Event handler for the keydown event of the add custom domain property input.
+   */
+  [addCustomPropertyKeydownHandler](e: KeyboardEvent): void;
   [commitNewEndpoint](): Promise<void>;
   [cancelNewEndpoint](): Promise<void>;
   /**
    * @param value The title of the documentation.
    */
-  [commitNewDocumentation](value: string): Promise<void>;
+  [commitNewDocumentation](value?: string): Promise<void>;
   /**
    * @param value The name of the schema.
    */
-  [commitNewSchema](value: string);
+  [commitNewSchema](value?: string): Promise<void>;
+  /**
+   * @param value The name of the custom property.
+   */
+  [commitNewCustomProperty](value?: string): Promise<void>;
   [endpointCreatedHandler](e: ApiStoreStateCreateEvent<ApiEndPoint>): Promise<void>;
   [endpointDeletedHandler](e: ApiStoreStateDeleteEvent): Promise<void>;
   [endpointUpdatedHandler](e: ApiStoreStateUpdateEvent<ApiEndPoint>): Promise<void>;
@@ -655,12 +711,12 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   /**
    * @returns The template for the summary filed.
    */
-  [summaryTemplate](): TemplateResult|string;
+  [summaryTemplate](): TemplateResult | string;
 
   /**
    * @returns The template for the list of endpoints.
    */
-  [endpointsTemplate](): TemplateResult|string;
+  [endpointsTemplate](): TemplateResult | string;
 
   /**
    * @returns The template for an endpoint.
@@ -683,7 +739,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   /**
    * @returns The template for the documentations section.
    */
-  [documentationsTemplate](): TemplateResult|string;
+  [documentationsTemplate](): TemplateResult | string;
 
   /**
    * @returns The template for the documentation list item.
@@ -698,7 +754,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   /**
    * @returns The template for the types (schemas) section.
    */
-  [schemasTemplate](): TemplateResult|string;
+  [schemasTemplate](): TemplateResult | string;
 
   /**
    * @returns The template for the documentation list item.
@@ -708,7 +764,7 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   /**
    * @returns The template for the security section.
    */
-  [securitiesTemplate](): TemplateResult|string;
+  [securitiesTemplate](): TemplateResult | string;
 
   /**
    * @returns The template for the security list item.
@@ -716,9 +772,19 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
   [securityTemplate](item: SecurityItem): TemplateResult;
 
   /**
+   * @returns The template for the custom domain properties section.
+   */
+  [customPropertiesTemplate](): TemplateResult | string;
+
+  /**
+   * @returns The template for the security list item.
+   */
+  [customPropertyTemplate](item: CustomDomainPropertyListItem): TemplateResult;
+
+  /**
    * @returns The template for the filter input.
    */
-  [filterTemplate](): TemplateResult|string;
+  [filterTemplate](): TemplateResult | string;
   /**
    * @return The template for the new endpoint input.
    */
@@ -731,6 +797,10 @@ export default class GraphApiNavigationElement extends EventsTargetMixin(LitElem
    * @return The template for the new schema input.
    */
   [addSchemaInputTemplate](): TemplateResult;
+  /**
+   * @return The template for the new custom domain property input.
+   */
+  [addCustomPropertyInputTemplate](): TemplateResult;
   /**
    * @param id The domain id of the item being edited
    * @param label The current name to render.

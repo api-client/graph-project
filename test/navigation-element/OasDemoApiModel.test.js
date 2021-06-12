@@ -1,5 +1,5 @@
 import { fixture, assert, html } from '@open-wc/testing';
-import { AmfStoreService } from '@api-client/amf-store';
+import { AmfStoreService } from '@api-client/amf-store/worker.index.js';
 import { nextFrame, oneEvent } from '@open-wc/testing-helpers';
 import { AmfLoader } from '../helpers/AmfLoader.js';
 import '../../graph-api-navigation.js';
